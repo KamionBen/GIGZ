@@ -1,0 +1,11 @@
+zombie : https://opengameart.org/content/animated-top-down-zombie
+survivor : https://opengameart.org/content/animated-top-down-survivor-player
+weapons : https://opengameart.org/content/weapon-1
+
+press start 2p : https://www.dafont.com/fr/press-start-2p.font
+biometric joe : https://www.dafont.com/fr/biometric-joe.font
+
+blood : https://www.videocopilot.net/products/action2/
+
+tileset : https://opengameart.org/content/post-apocalyptic-16x16-tileset-update1
+tileset2 : https://adamatomic.itch.io/jawbreaker
