@@ -10,7 +10,7 @@ class SurvivorSprite(pg.sprite.Sprite):
         self.spriteset = prepare.SURVIVOR_SPRITESET
         self.weapon_img = 'handgun'
         self.anim_status = 'idle'
-        self.anim_speed = .2
+        self.anim_speed = .5
         self.sprite_index = 0
         self.orientation = 0
 
@@ -51,10 +51,26 @@ class SurvivorControl(SurvivorSprite):
 
         self.status = 'idle'
         self.speed = self._speed_base
+        self.cooldown = 0
+        self.meleeattack_speed = 30
+        self.meleeattack_flag = True
 
         self.health = [100, 100]
 
+    def meleeattack(self):
+        if self.meleeattack_flag:
+            self.status = 'meleeattack'
+            self.anim_status = 'meleeattack'
+            self.cooldown = 0
+            self.sprite_index = 0
+            self.meleeattack_flag = False
+
     def update(self):
+        if self.status == 'meleeattack':
+            self.cooldown += 1
+            if self.cooldown >= self.meleeattack_speed:
+                self.cooldown = 0
+                self.idle()
         self.update_sprite()
 
     def _set_orientation(self):
@@ -81,3 +97,10 @@ class SurvivorControl(SurvivorSprite):
 
     def move(self, vector):
         self.position += vector * self.speed
+        if self.status in ['idle']:
+            self.status = 'move'
+            self.status = 'move'
+
+    def idle(self):
+        self.status = 'idle'
+        self.anim_status = 'idle'

@@ -56,6 +56,9 @@ class ZombieControl(ZombieSprite):
         self.on_screen = False
 
         self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"
+        self.kickback_flag = False
+        self.kickback_force = 0
+        self.kickback_direction = (0,0)
 
         self.update_sprite()
 
@@ -65,12 +68,32 @@ class ZombieControl(ZombieSprite):
             if self.cooldown >= self.attack_speed:
                 self.cooldown = 0
                 self.idle()
+        if self.status == 'kickback':
+            self.cooldown += 1
+            if self.cooldown < self.kickback_force:
+                self.position += self.kickback_direction
+                self._update_current_chunk()
+            else:
+                self.idle()
+                self.kickback_flag = False
 
         if self.target is not None:
             angle = pg.Vector2(self.position).angle_to(pg.Vector2(self.target.position)-self.position)
             self.orientation = 315-angle
         if self.on_screen:
             self.update_sprite()
+
+    def kickback(self, direction, force):
+        """ The zombie took some damages and move back for a while """
+        self.kickback_flag = True
+        self.status = 'kickback'
+        self.anim_status = 'idle'
+        self.kickback_direction = direction
+        self.kickback_force = force
+        self.cooldown = 0
+
+
+
 
     def _update_current_chunk(self):
         self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"

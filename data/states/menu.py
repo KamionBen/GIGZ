@@ -1,7 +1,7 @@
 from time import time
 import pygame as pg
 from pygame.locals import *
-from .. import tools, prepare, player, level
+from .. import tools, prepare, player, level, survivor
 
 
 class MainMenu(tools.State):
@@ -30,19 +30,27 @@ class MainMenu(tools.State):
         self.menu_screen = pg.Surface(prepare.RESOLUTION, SRCALPHA, 32)
         self._update_menu_screen()
 
+    def start_game(self):
+        """ Initiate the game """
+        # Create level
+        tools.State.level = level.Level(name=self.level_options['Level'],
+                                        difficulty=self.level_options['Difficulty'],
+                                        zombie_number=self.level_options['Zombies'],
+                                        friendly_fire=self.level_options['Friendly_fire'])
+
+        for i, u_player in enumerate(tools.State.players):
+            u_player.update_options()
+            new_survivor = survivor.SurvivorControl(self.level.survivors_spawns[i])
+            u_player.set_survivor(new_survivor)
+
+
     def update(self):
         self.draw(prepare.SCREEN)
         if all(self.ready) and len(self.ready) > 0:
             if self.timer is None:
                 self.timer = time()
             elif time() - self.timer >= 3:  # 3 seconds
-                # Create level
-                tools.State.level = level.Level(name=self.level_options['Level'],
-                                                difficulty=self.level_options['Difficulty'],
-                                                zombie_number=self.level_options['Zombies'],
-                                                friendly_fire=self.level_options['Friendly_fire'])
-                for u_player in self.players:
-                    u_player.update_options()
+                self.start_game()
                 self.done = True
         elif self.timer is not None:
             self.timer = None

@@ -7,6 +7,9 @@ class Game(tools.State):
     def __init__(self):
         tools.State.__init__(self)
 
+        self.next = 'pause'
+        self.previous = 'menu'
+
         self.gui_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
         self.debug_surface = None
         self.debug = True
@@ -14,6 +17,7 @@ class Game(tools.State):
 
         self.survivors = pg.sprite.Group()
         self.zombies = pg.sprite.Group()
+        self.zombie_left = [0, 0]  # Zombie left, zombie total
 
         self.camera = pg.math.Vector2(0, 0)
         self.loaded_chunks = []
@@ -75,7 +79,22 @@ class Game(tools.State):
         entity.move(vector)
         self._check_level_limits(entity)
 
+    def spawn_zombies(self):
+        if tools.State.level.zombie_number not in [None, 'Unlimited']:
+            while self.zombie_left[1] < self.level.zombie_number:
+                # TODO : Achtung ! Infinite loop if too much zombies and not enough spawns
+                spawn = choice(self.level.zombies_spawns)
+                rect = pg.Rect(spawn[0], spawn[1], 70, 70)
+                if self._check_wall_collision(rect) is False and self._check_zombie_collision(rect) is False:
+                    self.zombies.add(zombies.ZombieControl(spawn))
+                    self.zombie_left[0] += 1
+                    self.zombie_left[1] += 1
+
     def update(self):
+        self.spawn_zombies()
+        if len(self.survivors) < len(tools.State.players):
+            for play in tools.State.players:
+                self.survivors.add(play.survivor)
         prepare.CLOCK.tick(prepare.FPS)
         prepare.SCREEN.fill('black')
         for surv in self.survivors:
@@ -141,7 +160,13 @@ class Game(tools.State):
 
             pg.draw.circle(screen, (0, 0, 0, 128), position, surv.radius)  # Shadow
             # pg.draw.circle(screen, self.players[i].color, position, surv.radius + 10, 10)  # Player color
-
+            if surv.status == 'meleeattack':
+                for zombie in self.zombies:
+                    if zombie.on_screen:
+                        dist = pg.Vector2(surv.position[0]-zombie.position[0], surv.position[1]-zombie.position[1])
+                        direction = pg.Vector2(2,0).rotate(surv.orientation)
+                        if dist.length() < 110:
+                            zombie.kickback(direction, 30)
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 
         for zombie in self.zombies:
@@ -190,15 +215,23 @@ class Game(tools.State):
     def control_survivor(self, event, joy_number):
         c_survivor = self.players[joy_number].survivor
         if event.type == pg.JOYAXISMOTION:
-            if event.axis in [0, 1]:  # Leftstick
+            if event.axis in [0, 1]:  # Left stick
                 c_survivor.set_leftstick(event.axis, event.value)
-            if event.axis in [2, 3]:  # Rightstick
+            if event.axis in [2, 3]:  # Right stick
                 c_survivor.set_rightstick(event.axis-2, event.value)
+            if event.axis == 4:  # Left trigger
+                if event.value > .9:
+                    c_survivor.meleeattack()
+                if event.value < .5:
+                    c_survivor.meleeattack_flag = True
+        if event.type == pg.JOYBUTTONDOWN:
+            if event.button == 6:  # Options button
+                self.done = True
 
     # Zombie control functions
     def control_zombies(self):
         for zombie in self.zombies:
-            if zombie.active:
+            if zombie.active and zombie.status != 'kickback':
                 if zombie.target is None:
                     self._seek_target(zombie)
                 direction = pg.Vector2(zombie.speed, 0).rotate(-zombie.orientation)
@@ -244,7 +277,7 @@ class Game(tools.State):
                 self.joysticks.reverse()
 
     # Startup
-    def startup(self):
+    def start_game(self):
         """ Initiate the players and zombies """
         # ZOMBIES
         if tools.State.level.zombie_number not in [None, 'Unlimited']:
@@ -262,3 +295,8 @@ class Game(tools.State):
             i_player.set_survivor(new_survivor)
 
         self._update_camera()
+
+    def startup(self):
+        """ Function launched every time you exit the menu pause """
+        pass
+
