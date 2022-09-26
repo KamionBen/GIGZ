@@ -36,9 +36,5 @@ for status, s_dict in ZOMBIE_SPRITESET.items():
     for img in s_dict['files']:
         IMAGES[img] = tools.scale_ratio(IMAGES[img], RATIO)
 
-player_options = [tools.Options(['Vibrations', 'Color'],
-                                [[True, False], [(23, 82, 153), (16, 129, 13), (141, 0, 22)]]) for _ in range(2)]
 
 
-level_options = tools.Options(['Level', 'Difficulty', 'Zombies', 'Friendly fire'],
-                              [['HVStreet'], ['Godmode', 'Easy'], [100, 50, 10, None], [False, True]])

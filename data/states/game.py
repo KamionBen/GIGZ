@@ -7,15 +7,11 @@ class Game(tools.State):
     def __init__(self):
         tools.State.__init__(self)
 
-        self.level = None
-        self.players = []
-
         self.gui_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
         self.debug_surface = None
         self.debug = True
         self.pause = False
 
-        self.joysticks = None
         self.survivors = pg.sprite.Group()
         self.zombies = pg.sprite.Group()
 
@@ -26,7 +22,7 @@ class Game(tools.State):
 
     def _update_gui(self):
         self.gui_surface.fill((0, 0, 0, 0))
-        for i, player in enumerate(self.players):
+        for i, player in enumerate(tools.State.players):
             big_font = prepare.FONTS['Biometric Joe'][58]
             name_txt = big_font.render(player.name, True, player.color)
             self.gui_surface.blit(name_txt, (20, 800))
@@ -249,31 +245,20 @@ class Game(tools.State):
 
     # Startup
     def startup(self):
-        """ Initiate the level, players and zombies """
-        # LEVEL
-        self.level = level.Level(name=prepare.level_options[0][0],
-                                 difficulty=prepare.level_options[1][0],
-                                 zombie_number=prepare.level_options[2][0],
-                                 friendly_fire=prepare.level_options[3][0])
-
+        """ Initiate the players and zombies """
         # ZOMBIES
-        if self.level.zombie_number not in [None, 'Unlimited']:
+        if tools.State.level.zombie_number not in [None, 'Unlimited']:
             while len(self.zombies) < self.level.zombie_number:
+                # TODO : Achtung ! Infinite loop if too much zombies and not enough spawns
                 spawn = choice(self.level.zombies_spawns)
                 rect = pg.Rect(spawn[0], spawn[1], 70, 70)
                 if self._check_wall_collision(rect) is False and self._check_zombie_collision(rect) is False:
                     self.zombies.add(zombies.ZombieControl(spawn))
 
-        # JOYSTICKS & PLAYERS & SURVIVORS
-        self.update_joysticks()
-        for i in range(pg.joystick.get_count()):
+        # SURVIVORS
+        for i, i_player in enumerate(tools.State.players):
             new_survivor = survivor.SurvivorControl(self.level.survivors_spawns[i])
             self.survivors.add(new_survivor)
-
-            new_player = player.PlayerProfile()
-            new_player.set_vibration(prepare.player_options[i][0][0])
-            new_player.set_color(prepare.player_options[i][1][0])
-            new_player.set_survivor(new_survivor)
-            self.players.append(new_player)
+            i_player.set_survivor(new_survivor)
 
         self._update_camera()

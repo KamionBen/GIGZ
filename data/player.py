@@ -12,12 +12,12 @@ class PlayerProfile:
         else:
             self.name = name
 
-        self.options = {'Vibrations': [True, False],
-                        'Color': [(23, 82, 153), (16, 129, 13), (141, 0, 22)]}
+        self.options = tools.Options(Vibrations=[True, False],
+                                     Color=[(23, 82, 153), (16, 129, 13), (141, 0, 22)])
 
         # Settings
-        self.vibration = self.options['Vibrations'][0]
-        self.color = self.options['Color'][0]
+        self.vibration = None
+        self.color = None
 
         self.controller_guid = None
         self.survivor = None
@@ -26,6 +26,12 @@ class PlayerProfile:
         self.kills = 0
         self.ff_count = 0  # Friendly fire damages
         self.precision = [0, 0]
+
+    def update_options(self):
+        self.vibration = self.options['Vibrations']
+        self.color = self.options['Color']
+    def set_name(self, new_name):
+        self.name = new_name
 
     def set_survivor(self, new_survivor):
         self.survivor = new_survivor

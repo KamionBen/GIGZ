@@ -129,9 +129,61 @@ def get_weapon_list(csv_file):
 
 
 class Options:
-    def __init__(self, names=(), options=()):
-        self.names = names
-        self.options = options
+    def __init__(self, **options):
+        self.names = []
+        self.options = []
+        for name, option in options.items():
+            self.names.append(name)
+            self.options.append(option)
+
+        self.cursor = 0  # The option that is currently selected
+        self.parameter = [0 for _ in range(len(self))]  # For each parameter, a new selector is created
+
+    def __getitem__(self, item):
+        if item not in self.names:
+            raise KeyError(f"Key '{item}' not found")
+        else:
+            ind = self.names.index(item)
+            return self.options[ind][self.parameter[ind]]
+
+    def is_selected(self, name):
+        return name == self.names[self.cursor]
+
+    def change_cursor(self, incr, loop=True):
+        """ Change the selected option """
+        self.cursor += incr
+        if self.cursor < 0:
+            if loop:
+                self.cursor = len(self) - 1
+            else:
+                self.cursor = 0
+        if self.cursor >= len(self):
+            if loop:
+                self.cursor = 0
+            else:
+                self.cursor = len(self) - 1
+
+    def change_parameter(self, incr, cursor=None, loop=True):
+        """ Change the parameter of the currently selected option """
+        if cursor is None:
+            cursor = self.cursor
+        self.parameter[cursor] += incr
+        if self.parameter[cursor] < 0:
+            if loop:
+                self.parameter[cursor] = len(self.options[cursor]) - 1
+            else:
+                self.parameter[cursor] = 0
+        if self.parameter[cursor] >= len(self.options[cursor]):
+            if loop:
+                self.parameter[cursor] = 0
+            else:
+                self.parameter[cursor] = len(self.options[cursor]) - 1
+
+    def items(self):
+        for i, name in enumerate(self.names):
+            current_parameter = self.parameter[i]
+            parameter = self.options[i][current_parameter]
+            yield name, parameter
 
     def __len__(self):
         return len(self.names)
@@ -139,30 +191,17 @@ class Options:
     def __iter__(self):
         return iter(self.names)
 
-    def __getitem__(self, index):
-        return self.options[index]
-
-    def select_option(self, index, direction):
-        if direction == 1:
-            _temp = self.options[index].pop(0)
-            self.options[index].append(_temp)
-        if direction == -1:
-            _temp = self.options[index].pop(-1)
-            self.options[index].insert(0, _temp)
-
 
 class State:
+    players = []
+    joysticks = []
+    level = None
+
     def __init__(self):
         self.done = False
         self.next = None
         self.quit = False
         self.previous = None
-
-        self.options = {}
-        self.selected_index = 0
-
-        self.players = []
-        self.joysticks = []
 
     def startup(self):
         pass
@@ -172,18 +211,3 @@ class State:
 
     def get_event(self, event):
         pass
-
-    def change_selected_option(self, op=None):
-        if op is not None:
-            self.selected_index += op
-            if self.selected_index < 0:
-                self.selected_index = len(self.options) -1
-            if self.selected_index >= len(self.options):
-                self.selected_index = 0
-
-
-
-
-
-
-
