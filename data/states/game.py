@@ -13,7 +13,6 @@ class Game(tools.State):
         self.gui_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
         self.debug_surface = None
         self.debug = True
-        self.pause = False
 
         self.survivors = pg.sprite.Group()
         self.zombies = pg.sprite.Group()
@@ -91,6 +90,10 @@ class Game(tools.State):
                     self.zombie_left[1] += 1
 
     def update(self):
+        for u_player in tools.State.players:
+            if u_player.buttons['pause']:
+                self.set_pause()
+                break
         self.spawn_zombies()
         if len(self.survivors) < len(tools.State.players):
             for play in tools.State.players:
@@ -98,9 +101,19 @@ class Game(tools.State):
         prepare.CLOCK.tick(prepare.FPS)
         prepare.SCREEN.fill('black')
         for surv in self.survivors:
-            vect = pg.math.Vector2((surv.leftstick[0], surv.leftstick[1]))
-            if vect.length_squared() > .3**2:
-                self._move_entity(vect, surv)
+            if surv.is_moving():
+                initial_pos = pg.Vector2(surv.position)
+                projection = surv.projection
+                projection_x = pg.Rect(0, 0 , 70, 70)
+                projection_x.center = initial_pos[0] + projection[0], initial_pos[1]
+                projection_y = pg.Rect(0, 0, 70, 70)
+                projection_y.center = initial_pos[0], initial_pos[1] + projection[1]
+                for wall in self.level.walls:
+                    if wall.rect.colliderect(projection_x):
+                        projection[0] = 0
+                    if wall.rect.colliderect(projection_y):
+                        projection[1] = 0
+                surv.position += projection
 
         self.survivors.update()
         self.control_zombies()
@@ -208,11 +221,15 @@ class Game(tools.State):
     # Event functions
     def get_event(self, event):
         """ Get the event and dispatch it to the correct function """
-        if event.type in [pg.JOYAXISMOTION, pg.JOYBUTTONDOWN]:
+        if event.type in [pg.JOYAXISMOTION, pg.JOYBUTTONDOWN, pg.JOYBUTTONUP]:
+            player = self.players[event.joy]
+            player.get_event(event)
+            player.survivor.get_event(event)
             self.control_survivor(event, event.joy)
 
     # Survivor control functions
     def control_survivor(self, event, joy_number):
+        # TODO : Put this in the survivor class and validate the move
         c_survivor = self.players[joy_number].survivor
         if event.type == pg.JOYAXISMOTION:
             if event.axis in [0, 1]:  # Left stick
@@ -224,9 +241,10 @@ class Game(tools.State):
                     c_survivor.meleeattack()
                 if event.value < .5:
                     c_survivor.meleeattack_flag = True
-        if event.type == pg.JOYBUTTONDOWN:
-            if event.button == 6:  # Options button
-                self.done = True
+
+    def set_pause(self):
+        """ Pause game, switch to pause state """
+        self.done = True
 
     # Zombie control functions
     def control_zombies(self):
@@ -268,13 +286,6 @@ class Game(tools.State):
                 if new_distance < current_distance:
                     target = surv
         zombie.target = target
-
-    # Generic functions
-    def update_joysticks(self):
-        self.joysticks = tools.update_joysticks()
-        if len(self.joysticks) > 1:
-            if self.joysticks[0].get_guid() != self.players[0].controller_guid:
-                self.joysticks.reverse()
 
     # Startup
     def start_game(self):

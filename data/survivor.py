@@ -17,6 +17,7 @@ class SurvivorSprite(pg.sprite.Sprite):
         self.position = position
 
         self.image = pg.Surface((140, 140), pg.SRCALPHA, 32)
+        self.rect = self.image.get_rect()
 
         # Hitbox test
         self.radius = 35
@@ -37,6 +38,8 @@ class SurvivorSprite(pg.sprite.Sprite):
         # TODO : Rotate around the actual center
         self.image.blit(rotated, (70 - rotated.get_width() / 2, 70 - rotated.get_height() / 2))
 
+        pg.draw.rect(self.image, 'blue', (0, 0, self.rect.width, self.rect.height), 1)
+
     def set_position(self, new_position):
         self.position = new_position
 
@@ -46,16 +49,27 @@ class SurvivorControl(SurvivorSprite):
         SurvivorSprite.__init__(self, position)
         self._speed_base = 5
 
-        self.leftstick = {0: 0, 1: 0}
-        self.rightstick = {0: 0, 1: 0}
-
         self.status = 'idle'
+
+        # Stats
         self.speed = self._speed_base
-        self.cooldown = 0
         self.meleeattack_speed = 30
+        self.health = [100, 100]
+
+        self.cooldown = 0
         self.meleeattack_flag = True
 
-        self.health = [100, 100]
+
+
+        # Control
+        self.leftstick = pg.Vector2(0, 0)
+        self.rightstick = pg.Vector2(0, 0)
+
+        self.move_flag = False
+        self.projection = self.leftstick * self.speed
+
+    def get_event(self, event):
+        pass
 
     def meleeattack(self):
         if self.meleeattack_flag:
@@ -66,6 +80,12 @@ class SurvivorControl(SurvivorSprite):
             self.meleeattack_flag = False
 
     def update(self):
+        if self.leftstick.length_squared() > .3**2:
+            self.move_flag = True
+        else:
+            self.move_flag = False
+        self.projection = self.leftstick * self.speed
+
         if self.status == 'meleeattack':
             self.cooldown += 1
             if self.cooldown >= self.meleeattack_speed:
@@ -104,3 +124,6 @@ class SurvivorControl(SurvivorSprite):
     def idle(self):
         self.status = 'idle'
         self.anim_status = 'idle'
+
+    def is_moving(self):
+        return self.move_flag

@@ -1,3 +1,4 @@
+import pygame as pg
 from . import tools
 
 
@@ -15,6 +16,8 @@ class PlayerProfile:
         self.options = tools.Options(Vibrations=[True, False],
                                      Color=[(23, 82, 153), (16, 129, 13), (141, 0, 22)])
 
+        self.buttons = {'pause': False}
+
         # Settings
         self.vibration = None
         self.color = None
@@ -27,9 +30,13 @@ class PlayerProfile:
         self.ff_count = 0  # Friendly fire damages
         self.precision = [0, 0]
 
+    def reinit_buttons(self):
+        self.buttons = {'pause': False}
+
     def update_options(self):
         self.vibration = self.options['Vibrations']
         self.color = self.options['Color']
+
     def set_name(self, new_name):
         self.name = new_name
 
@@ -44,3 +51,9 @@ class PlayerProfile:
 
     def set_controller(self, value):
         self.controller_guid = value
+
+    def get_event(self, event):
+        if event.type == pg.JOYBUTTONDOWN:
+            if event.button == 6:  # PS4 options button
+                self.buttons['pause'] = self.buttons['pause'] is False  # Switches buttons states
+
