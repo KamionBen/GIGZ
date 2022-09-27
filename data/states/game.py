@@ -27,15 +27,13 @@ class Game(tools.State):
         self.gui_surface.fill((0, 0, 0, 0))
         for i, g_player in enumerate(tools.State.players):
             big_font = prepare.FONTS['Biometric Joe'][58]
-            medium_font = prepare.FONTS['Biometric Joe'][32]
+            medium_font = prepare.FONTS['Courier New Bold'][26]
             name_txt = big_font.render(g_player.name, True, g_player.color)
             self.gui_surface.blit(name_txt, (50, 800))
-            infos = [g_player.survivor.status, str(g_player.survivor.health)]
+            infos = [g_player.survivor.status, str(g_player.survivor.health), str(g_player.survivor.weapon)]
             for n, info in enumerate(infos):
                 txt = medium_font.render(info, True, 'white')
                 self.gui_surface.blit(txt, (50, 850 + n * 25))
-
-
 
     def _check_level_limits(self, c_survivor):
         if c_survivor.position[0] < c_survivor.radius:
