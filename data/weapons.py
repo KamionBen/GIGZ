@@ -3,7 +3,7 @@ import csv
 
 class Weapon:
     def __init__(self, name, category, cadence, sprite, image_src, damages, shooting_speed, magazine, reload_speed,
-                 gear_slots, distance):
+                 gear_slots, distance, meleeattack):
         # Infos
         self.name = name  # Unique designation
         self.category = category  # Maybe useless
@@ -19,6 +19,7 @@ class Weapon:
         self.damages = self._base_damages
         self._base_speed = shooting_speed
         self.shooting_speed = self._base_speed
+        self.meleeattack = meleeattack
 
         # Magazine
         self._base_magazine = magazine

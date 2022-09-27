@@ -25,10 +25,17 @@ class Game(tools.State):
 
     def _update_gui(self):
         self.gui_surface.fill((0, 0, 0, 0))
-        for i, player in enumerate(tools.State.players):
+        for i, g_player in enumerate(tools.State.players):
             big_font = prepare.FONTS['Biometric Joe'][58]
-            name_txt = big_font.render(player.name, True, player.color)
-            self.gui_surface.blit(name_txt, (20, 800))
+            medium_font = prepare.FONTS['Biometric Joe'][32]
+            name_txt = big_font.render(g_player.name, True, g_player.color)
+            self.gui_surface.blit(name_txt, (50, 800))
+            infos = [g_player.survivor.status, str(g_player.survivor.health)]
+            for n, info in enumerate(infos):
+                txt = medium_font.render(info, True, 'white')
+                self.gui_surface.blit(txt, (50, 850 + n * 25))
+
+
 
     def _check_level_limits(self, c_survivor):
         if c_survivor.position[0] < c_survivor.radius:
@@ -165,7 +172,6 @@ class Game(tools.State):
 
             position = chunk.position + self.camera_offset()
             screen.blit(chunk.image, position)
-            # TODO Blit in the fucking right place
 
         for i, surv in enumerate(self.survivors):
 
@@ -225,22 +231,6 @@ class Game(tools.State):
             player = self.players[event.joy]
             player.get_event(event)
             player.survivor.get_event(event)
-            self.control_survivor(event, event.joy)
-
-    # Survivor control functions
-    def control_survivor(self, event, joy_number):
-        # TODO : Put this in the survivor class and validate the move
-        c_survivor = self.players[joy_number].survivor
-        if event.type == pg.JOYAXISMOTION:
-            if event.axis in [0, 1]:  # Left stick
-                c_survivor.set_leftstick(event.axis, event.value)
-            if event.axis in [2, 3]:  # Right stick
-                c_survivor.set_rightstick(event.axis-2, event.value)
-            if event.axis == 4:  # Left trigger
-                if event.value > .9:
-                    c_survivor.meleeattack()
-                if event.value < .5:
-                    c_survivor.meleeattack_flag = True
 
     def set_pause(self):
         """ Pause game, switch to pause state """

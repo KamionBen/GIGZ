@@ -1,7 +1,7 @@
 ﻿Nom;Catégorie;Cadence;Sprite;Image;Dégats;Vitesse de tir;Taille du chargeur;Temps de recharge;Slots équipement;Distance
-Pistolet;Arme de poing;semi;handgun;pistol_full.png;25;2;8;5;ammo,magazine,canon gear;True
-Fusil d'assaut;Fusil d'assaut;automatic;rifle;Assault rifle_full.png;30;10;16;15;ammo,magazine,canon gear;True
-UZI;Arme de poing;automatic;handgun;USI_full.png;30;5;16;5;ammo,magazine,canon gear;True
-M16;Fusil d'assaut;automatic;rifle;M16_full.png;35;5;16;15;ammo,magazine,canon gear;True
-AK-47;Fusil d'assaut;automatic;rifle;AK_full.png;40;10;16;20;ammo,magazine,canon gear;True
-Fusil à pompe;Fusil à pompe;semi;shotgun;Shootgun_full.png;105;20;2;30;ammo,canon gear;True
+Pistolet;Arme de poing;semi;handgun;pistol_full.png;25;2;8;5;ammo,magazine,canon gear;True;5
+Fusil d'assaut;Fusil d'assaut;automatic;rifle;Assault rifle_full.png;30;10;16;15;ammo,magazine,canon gear;True;10
+UZI;Arme de poing;automatic;handgun;USI_full.png;30;5;16;5;ammo,magazine,canon gear;True;5
+M16;Fusil d'assaut;automatic;rifle;M16_full.png;35;5;16;15;ammo,magazine,canon gear;True;10
+AK-47;Fusil d'assaut;automatic;rifle;AK_full.png;40;10;16;20;ammo,magazine,canon gear;True;10
+Fusil à pompe;Fusil à pompe;semi;shotgun;Shootgun_full.png;105;20;2;30;ammo,canon gear;True;15

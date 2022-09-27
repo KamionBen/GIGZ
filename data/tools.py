@@ -122,8 +122,9 @@ def get_weapon_list(csv_file):
                     distance = True
                 else:
                     distance = False
+                meleeattack = int(row[11])
                 weapon_list.append(weapons.Weapon(name, category, cadence, sprite, img, damages, shooting_speed, magazine,
-                                          reload_time, slots, distance))
+                                          reload_time, slots, distance, meleeattack))
 
     return weapon_list
 

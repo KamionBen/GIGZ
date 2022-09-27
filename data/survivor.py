@@ -15,6 +15,7 @@ class SurvivorSprite(pg.sprite.Sprite):
         self.orientation = 0
 
         self.position = position
+        self.projection = pg.Vector2(0, 0)
 
         self.image = pg.Surface((140, 140), pg.SRCALPHA, 32)
         self.rect = self.image.get_rect()
@@ -38,7 +39,19 @@ class SurvivorSprite(pg.sprite.Sprite):
         # TODO : Rotate around the actual center
         self.image.blit(rotated, (70 - rotated.get_width() / 2, 70 - rotated.get_height() / 2))
 
+        # Debug lines
+        # Rect
         pg.draw.rect(self.image, 'blue', (0, 0, self.rect.width, self.rect.height), 1)
+        # Radius
+        pg.draw.circle(self.image, 'green', (70, 70), self.radius, 1)
+        # Projection
+        direction = self.projection.copy()
+        if direction.length_squared() > 0:
+            direction.scale_to_length(200)
+            pg.draw.line(self.image, 'blue', (70, 70), (70, 70) + direction, 1)
+        # Orientation
+        front = pg.Vector2(200, 0).rotate(-self.orientation)
+        pg.draw.line(self.image, 'green', (70, 70), (70, 70) + front, 1)
 
     def set_position(self, new_position):
         self.position = new_position
@@ -50,6 +63,8 @@ class SurvivorControl(SurvivorSprite):
         self._speed_base = 5
 
         self.status = 'idle'
+        self.weapon = prepare.WEAPONS[0]
+        self.weapon_img = self.weapon.sprite
 
         # Stats
         self.speed = self._speed_base
@@ -58,18 +73,27 @@ class SurvivorControl(SurvivorSprite):
 
         self.cooldown = 0
         self.meleeattack_flag = True
-
-
+        self.move_flag = False
+        self.shoot_flag = True
 
         # Control
         self.leftstick = pg.Vector2(0, 0)
         self.rightstick = pg.Vector2(0, 0)
+        self.lefttrigger = 0
+        self.righttrigger = 0
 
-        self.move_flag = False
         self.projection = self.leftstick * self.speed
 
     def get_event(self, event):
-        pass
+        if event.type == pg.JOYAXISMOTION:
+            if event.axis in (0, 1):  # Left stick
+                self.leftstick[event.axis] = event.value
+            if event.axis in (2, 3):  # Right stick
+                self.rightstick[event.axis-2] = event.value
+            if event.axis == 4:  # Left trigger
+                self.lefttrigger = event.value
+            if event.axis == 5:  # Right trigger
+                self.righttrigger = event.value
 
     def meleeattack(self):
         if self.meleeattack_flag:
@@ -80,50 +104,42 @@ class SurvivorControl(SurvivorSprite):
             self.meleeattack_flag = False
 
     def update(self):
+        """ Check the controls and trigger actions """
+        """ Priority : idle < move < shoot < reload < meleeattack """
         if self.leftstick.length_squared() > .3**2:
+            # Left stick = movement + orientation
+            self.set_status('move')
             self.move_flag = True
+            self.projection = self.leftstick * self.speed
+            angle = pg.math.Vector2(0, 0)
+            self.orientation = -angle.angle_to(self.leftstick)
         else:
+            self.set_status('idle')
             self.move_flag = False
-        self.projection = self.leftstick * self.speed
+            self.projection = pg.Vector2(0, 0)
 
-        if self.status == 'meleeattack':
-            self.cooldown += 1
-            if self.cooldown >= self.meleeattack_speed:
-                self.cooldown = 0
-                self.idle()
+        if self.rightstick.length_squared() > .7**2:
+            # Right stick = orientation
+            angle = pg.math.Vector2(0, 0)
+            self.orientation = -angle.angle_to(self.rightstick)
+
+        if self.righttrigger > .9 and self.shoot_flag:
+            self.set_status('shoot')
+
+        if self.lefttrigger > .9 and self.meleeattack_flag:
+            self.set_status('meleeattack')
+
         self.update_sprite()
-
-    def _set_orientation(self):
-        angle = pg.math.Vector2(0, 0)
-        leftstick = pg.math.Vector2((self.leftstick[0], self.leftstick[1]))
-        if leftstick.length() > .3:
-            self.orientation = -angle.angle_to(leftstick)
-        rightstick = pg.math.Vector2((self.rightstick[0], self.rightstick[1]))
-        if rightstick.length() > .8:
-            self.orientation = -angle.angle_to(rightstick)
-
-    def set_leftstick(self, index, value):
-        self.leftstick[index] = value
-        self._set_orientation()
-
-    def set_rightstick(self, index, value):
-        self.rightstick[index] = value
-        self._set_orientation()
 
     def get_damages(self, damages):
         self.health[0] -= damages
         if self.health[0] < 0:
             self.health[0] = 0
 
-    def move(self, vector):
-        self.position += vector * self.speed
-        if self.status in ['idle']:
-            self.status = 'move'
-            self.status = 'move'
-
-    def idle(self):
-        self.status = 'idle'
-        self.anim_status = 'idle'
+    def set_status(self, new_status):
+        self.status = new_status
+        if new_status in ['idle', 'move', 'shoot', 'reload', 'meleeattack']:
+            self.anim_status = new_status
 
     def is_moving(self):
         return self.move_flag
