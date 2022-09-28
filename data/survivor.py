@@ -97,8 +97,6 @@ class SurvivorControl(SurvivorSprite):
             if pos not in self.current_chunks:
                 self.current_chunks.append(pos)
 
-
-
     def get_event(self, event):
         if event.type == pg.JOYAXISMOTION:
             if event.axis in (0, 1):  # Left stick
@@ -146,7 +144,7 @@ class SurvivorControl(SurvivorSprite):
             self.set_status('shoot')
 
         if self.lefttrigger > .9 and self.meleeattack_flag:
-            self.set_status('meleeattack')
+            self.meleeattack()
 
         self.update_sprite()
 

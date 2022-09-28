@@ -23,6 +23,12 @@ class Game(tools.State):
 
         self.font = pg.font.Font(None, 26)
 
+        self.game_started = False
+
+    def startup(self):
+        if self.game_started is False:
+            self.start_game()
+
     def _update_ui(self):
         """ Show all the non-diegetic informations """
         self.ui_surface.fill((0, 0, 0, 0))
@@ -52,67 +58,14 @@ class Game(tools.State):
 
         return coord
 
-    def _check_level_limits(self, c_survivor):
-        """ Should check coordinates and return a correct value """
-        # TODO :
-        if c_survivor.position[0] < c_survivor.radius:
-            c_survivor.position[0] = c_survivor.radius
-        if c_survivor.position[1] < c_survivor.radius:
-            c_survivor.position[1] = c_survivor.radius
-
-        if c_survivor.position[0] > self.level.width - c_survivor.radius:
-            c_survivor.position[0] = self.level.width - c_survivor.radius
-        if c_survivor.position[1] > self.level.height - c_survivor.radius:
-            c_survivor.position[1] = self.level.height - c_survivor.radius
-
-    def _check_wall_collision(self, rect, allwalls=True):
-        # TODO : Don't check all the walls
-        collision = False
-        for wall in self.level.walls:
-            if wall.rect.colliderect(rect):
-                collision = True
-                break
-        return collision
-
-    def _check_zombie_collision(self, rect, ignore=()):
-        collision = False
-        for zombie in self.zombies:
-            if zombie not in ignore:
-                z_pos_x, z_pos_y = zombie.position[0] - zombie.radius, zombie.position[1] - zombie.radius
-                z_size = zombie.radius * 2
-                z_rect = pg.Rect(z_pos_x, z_pos_y, z_size, z_size)
-                if z_rect.colliderect(rect):
-                    collision = True
-                    break
-        return collision
-
-    def _move_entity(self, vector, entity):
-        """ Check for collision and move the survivor (or the zombie) accordingly """
-        posx, posy = entity.position[0] - entity.radius, entity.position[1] - entity.radius
-        size = entity.radius * 2
-        projection_x = pg.rect.Rect(posx + vector[0] * entity.speed, posy, size, size)
-        projection_y = pg.rect.Rect(posx, posy + vector[1] * entity.speed, size, size)
-
-        if self._check_wall_collision(projection_x) or self._check_zombie_collision(projection_x, ignore=[entity]):
-            vector.x = 0
-        if self._check_wall_collision(projection_y) or self._check_zombie_collision(projection_y, ignore=[entity]):
-            vector.y = 0
-
-        # TODO : Allow the survivor to move around walls
-
-        entity.move(vector)
-        self._check_level_limits(entity)
-
     def spawn_zombies(self):
         if tools.State.level.zombie_number not in [None, 'Unlimited']:
             while self.zombie_left[1] < self.level.zombie_number:
-                # TODO : Achtung ! Infinite loop if too much zombies and not enough spawns
+                # TODO : Check for collision
                 spawn = choice(self.level.zombies_spawns)
-                rect = pg.Rect(spawn[0], spawn[1], 70, 70)
-                if self._check_wall_collision(rect) is False and self._check_zombie_collision(rect) is False:
-                    self.zombies.add(zombies.ZombieControl(spawn))
-                    self.zombie_left[0] += 1
-                    self.zombie_left[1] += 1
+                self.zombies.add(zombies.ZombieControl(spawn))
+                self.zombie_left[0] += 1
+                self.zombie_left[1] += 1
 
     def update(self):
         # Check for pause
@@ -120,12 +73,6 @@ class Game(tools.State):
             if u_player.buttons['pause']:
                 self.set_pause()
                 break
-
-        # Spawn zombies in not already done
-        self.spawn_zombies()
-        if len(self.survivors) < len(tools.State.players):
-            for play in tools.State.players:
-                self.survivors.add(play.survivor)
 
         # Prepare screen and tick
         prepare.CLOCK.tick(prepare.FPS)
@@ -145,7 +92,6 @@ class Game(tools.State):
                 surv.set_position(projection)
 
         self.survivors.update()
-        self.control_zombies()
         self.zombies.update()
         self._update_camera()
         self._load_chunks()
@@ -166,14 +112,6 @@ class Game(tools.State):
             key = f"{int(coord[0])}.{int(coord[1])}"
             if key in self.level.chunks.keys():
                 self.loaded_chunks.append(key)
-
-        # TODO : Put this elsewhere
-        for zombie in self.zombies:
-            if zombie.current_chunk in self.loaded_chunks:
-                zombie.activate()
-                zombie.on_screen = True
-            else:
-                zombie.on_screen = False
 
     def _update_camera(self):
         new_cam = pg.math.Vector2(0, 0)
@@ -202,13 +140,6 @@ class Game(tools.State):
 
             pg.draw.circle(screen, (0, 0, 0, 128), position, surv.radius)  # Shadow
             # pg.draw.circle(screen, self.players[i].color, position, surv.radius + 10, 10)  # Player color
-            if surv.status == 'meleeattack':
-                for zombie in self.zombies:
-                    if zombie.on_screen:
-                        dist = pg.Vector2(surv.position[0]-zombie.position[0], surv.position[1]-zombie.position[1])
-                        direction = pg.Vector2(2,0).rotate(surv.orientation)
-                        if dist.length() < 110:
-                            zombie.kickback(direction, 30)
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 
         # ZOMBIES
@@ -263,50 +194,6 @@ class Game(tools.State):
         """ Pause game, switch to pause state """
         self.done = True
 
-    # Zombie control functions
-    def control_zombies(self):
-        # TODO : Put in the zombie control class
-        for zombie in self.zombies:
-            if zombie.active and zombie.status != 'kickback':
-                if zombie.target is None:
-                    self._seek_target(zombie)
-                direction = pg.Vector2(zombie.speed, 0).rotate(-zombie.orientation)
-                attack = False
-                if zombie.status != 'attack':
-                    for surv in self.survivors:
-                        # Zombie rect
-                        posx, posy = zombie.position[0] - zombie.radius, zombie.position[1] - zombie.radius
-                        size = zombie.radius * 2
-                        projection = pg.rect.Rect(posx + direction[0], posy + direction[1], size, size)
-                        # Surv rect
-                        s_posx, s_posy = surv.position[0] - surv.radius, surv.position[1] - surv.radius
-                        s_size = surv.radius * 2
-                        surv_rect = pg.rect.Rect(s_posx, s_posy, s_size, s_size)
-                        if projection.colliderect(surv_rect):
-                            attack = True
-                            if self.level.difficulty != 'Godmode':
-                                surv.get_damages(zombie.force)
-                    if attack:
-                        zombie.attack()
-
-                    else:
-                        self._move_entity(direction, zombie)
-
-    def _seek_target(self, zombie):
-        """ The zombie is looking for someone to bite ! """
-        # TODO : Put in the zombiecontrol class
-        target = None
-        for surv in self.survivors:
-            if target is None:
-                target = surv
-            else:
-                current_distance = pg.Vector2(target.position).distance_to(zombie.position)
-                new_distance = pg.Vector2(surv.position).distance_to(zombie.position)
-                if new_distance < current_distance:
-                    target = surv
-        zombie.target = target
-
-    # Startup
     def start_game(self):
         """ Initiate the players and zombies """
         # ZOMBIES
@@ -314,9 +201,7 @@ class Game(tools.State):
             while len(self.zombies) < self.level.zombie_number:
                 # TODO : Achtung ! Infinite loop if too much zombies and not enough spawns
                 spawn = choice(self.level.zombies_spawns)
-                rect = pg.Rect(spawn[0], spawn[1], 70, 70)
-                if self._check_wall_collision(rect) is False and self._check_zombie_collision(rect) is False:
-                    self.zombies.add(zombies.ZombieControl(spawn))
+                self.zombies.add(zombies.ZombieControl(spawn))
 
         # SURVIVORS
         for i, i_player in enumerate(tools.State.players):
@@ -325,3 +210,4 @@ class Game(tools.State):
             i_player.set_survivor(new_survivor)
 
         self._update_camera()
+        self.game_started = True

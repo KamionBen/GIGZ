@@ -58,7 +58,7 @@ class ZombieControl(ZombieSprite):
         self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"
         self.kickback_flag = False
         self.kickback_force = 0
-        self.kickback_direction = (0,0)
+        self.kickback_direction = (0, 0)
 
         self.update_sprite()
 
@@ -94,6 +94,7 @@ class ZombieControl(ZombieSprite):
 
     def _update_current_chunk(self):
         self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"
+        # TODO : Maybe put a list of chunks here ?
 
     def move(self, vector):
         self.position += vector
