@@ -14,7 +14,7 @@ class SurvivorSprite(pg.sprite.Sprite):
         self.sprite_index = 0
         self.orientation = 0
 
-        self.position = position
+        self.position = pg.Vector2(position)
         self.projection = pg.Vector2(0, 0)
 
         self.image = pg.Surface((140, 140), pg.SRCALPHA, 32)
@@ -82,7 +82,22 @@ class SurvivorControl(SurvivorSprite):
         self.lefttrigger = 0
         self.righttrigger = 0
 
-        self.projection = self.leftstick * self.speed
+        self.current_chunks = []
+        self.projection_x = tools.Projection(self.position, self.radius, (self.leftstick.x * self.speed, 0))
+        self.projection_y = tools.Projection(self.position, self.radius, (0, self.leftstick.y * self.speed))
+
+    def update_current_chunks(self):
+        """ Update the chunks where the game need to check for collision"""
+        self.current_chunks = []
+        topleft = f"{int((self.position[0]-self.radius) // 256)}.{int((self.position[1]-self.radius) // 256)}"
+        topright = f"{int((self.position[0]+self.radius) // 256)}.{int((self.position[1]-self.radius) // 256)}"
+        bottomleft = f"{int((self.position[0]-self.radius) // 256)}.{int((self.position[1]+self.radius) // 256)}"
+        bottomright = f"{int((self.position[0]+self.radius) // 256)}.{int((self.position[1]+self.radius) // 256)}"
+        for pos in [topleft, topright, bottomleft, bottomright]:
+            if pos not in self.current_chunks:
+                self.current_chunks.append(pos)
+
+
 
     def get_event(self, event):
         if event.type == pg.JOYAXISMOTION:
@@ -106,17 +121,21 @@ class SurvivorControl(SurvivorSprite):
     def update(self):
         """ Check the controls and trigger actions """
         """ Priority : idle < move < shoot < reload < meleeattack """
+        self.update_current_chunks()
+
         if self.leftstick.length_squared() > .3**2:
             # Left stick = movement + orientation
             self.set_status('move')
             self.move_flag = True
-            self.projection = self.leftstick * self.speed
+
+            self.projection_x.update(self.position, (self.leftstick.x * self.speed, 0))
+            self.projection_y.update(self.position, (0, self.leftstick.y * self.speed))
+
             angle = pg.math.Vector2(0, 0)
             self.orientation = -angle.angle_to(self.leftstick)
         else:
             self.set_status('idle')
             self.move_flag = False
-            self.projection = pg.Vector2(0, 0)
 
         if self.rightstick.length_squared() > .7**2:
             # Right stick = orientation

@@ -92,9 +92,6 @@ class ZombieControl(ZombieSprite):
         self.kickback_force = force
         self.cooldown = 0
 
-
-
-
     def _update_current_chunk(self):
         self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"
 

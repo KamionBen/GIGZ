@@ -1,20 +1,21 @@
 import os
 import pygame as pg
 from . import tools, prepare
+from random import choice
 
+
+wall_colors = ['pink', 'red', 'green', 'blue', 'grey50', 'purple']
 
 class Wall(pg.sprite.Sprite):
     """ Basically just a grey Rect """
-    def __init__(self, size, position):
+    def __init__(self, pos_x, pos_y, size_x, size_y):
         pg.sprite.Sprite.__init__(self)
+        self.position = pos_x, pos_y
 
-        self.size = size
-        self.position = position
-
-        self.image = pg.Surface(size)
-        self.image.fill('pink')
+        self.image = pg.Surface((size_x, size_y))
+        self.image.fill(choice(wall_colors))
         self.rect = self.image.get_rect()
-        self.rect.topleft = position
+        self.rect.topleft = pos_x, pos_y
 
 
 class Chunk(pg.sprite.Sprite):
@@ -63,11 +64,13 @@ class Level:
         self.parse_layout()
 
     def parse_layout(self):
+        tile_size = 32
+        chunk_size = 8
         directory = os.path.join('resources', 'levels', self.name)
         layout = pg.image.load(os.path.join(directory, 'layout.png')).convert()
         poi = pg.image.load(os.path.join(directory, 'poi.png')).convert()
 
-        self.width, self.height = 32 * layout.get_width(), 32 * layout.get_height()
+        self.width, self.height = tile_size * layout.get_width(), tile_size * layout.get_height()
 
         self.rect = pg.rect.Rect(0, 0, self.width, self.height)
 
@@ -81,78 +84,61 @@ class Level:
             for x in range(layout.get_width()):
                 # Points of interest
                 if poi.get_at((x, y)) == s_spawn_color:
-                    self.survivors_spawns.append((x * 32, y * 32))
+                    self.survivors_spawns.append((x * tile_size, y * tile_size))
                 if poi.get_at((x, y)) == z_spawn_color:
-                    self.zombies_spawns.append((x * 32, y * 32))
+                    self.zombies_spawns.append((x * tile_size, y * tile_size))
 
-                coord = (int(x // 8), int(y // 8))
+                # Chunk
+                coord = (int(x // chunk_size), int(y // chunk_size))
                 key = f"{coord[0]}.{coord[1]}"
                 if key not in self.chunks.keys():
                     self.chunks[key] = Chunk(coord)
 
-                tile = pg.Surface((32, 32))
+                # Blit
+                tile = pg.Surface((tile_size, tile_size))
                 pixel_color = layout.get_at((x, y))
                 if pixel_color == road_color:
                     tile.blit(prepare.IMAGES['road.png'], (0, 0))
                 else:
                     tile.fill(layout.get_at((x, y)))
 
-                self.chunks[key].blit(tile, (x % 8 * 32, y % 8 * 32))
+                self.chunks[key].blit(tile, (x % chunk_size * tile_size, y % chunk_size * tile_size))
 
-        # WALLS
-        horizontal = {}
-        vertical = {}
-        solo = {}  # TODO : Check for non-connected walls
+        for key, chunk in self.chunks.items():
+            posx, posy = chunk.coord
+            horizontal = {}
+            vertical = {}
+            solo = {}  # Useless for now
+            for y in range(chunk_size):
+                horizontal[y] = []
+                for x in range(chunk_size):
+                    current_rect = pg.Rect(posx * 256 + x * tile_size, posy * 256 + y * tile_size, tile_size + 1, tile_size + 1)
+                    if chunk.image.get_at((x * tile_size, y * tile_size)) == (0, 0, 0, 255):
+                        if len(horizontal[y]) == 0:
+                            horizontal[y].append(current_rect)
+                        elif current_rect.colliderect(horizontal[y][-1]):
+                            horizontal[y][-1].width += tile_size
+                        else:
+                            horizontal[y].append(current_rect)
+            for x in range(chunk_size):
+                vertical[x] = []
+                for y in range(chunk_size):
+                    current_rect = pg.Rect(posx * 256 + x * tile_size, posy * 256 + y * tile_size, tile_size + 1, tile_size + 1)
+                    if chunk.image.get_at((x * tile_size, y * tile_size)) == (0, 0, 0, 255):
+                        if len(vertical[x]) == 0:
+                            vertical[x].append(current_rect)
+                        elif current_rect.colliderect(vertical[x][-1]):
+                            vertical[x][-1].height += tile_size
+                        else:
+                            vertical[x].append(current_rect)
 
-        tile = 32
+            for index, walllist in horizontal.items():
+                for rect in walllist:
+                    if rect.width > tile_size + 1:
+                        chunk.walls.add(Wall(rect.x, rect.y, rect.width, rect.height))
+            for walllist in vertical.values():
+                for rect in walllist:
+                    if rect.height > tile_size + 1:
+                        chunk.walls.add(Wall(rect.x, rect.y, rect.width, rect.height))
 
-        # Horizontal check
-        for y in range(layout.get_height()):
-            y_index = y * tile
-            horizontal[y_index] = []
-            for x in range(layout.get_width()):
-                color = layout.get_at([x, y])
-                # WALLS
-                if color == wall_color:
-                    current_rect = pg.Rect(x * tile, y * tile, tile + 1, tile + 1)
-                    if len(horizontal[y_index]) == 0:
-                        # Liste vide, on rajoute le premier qu'on trouve
-                        horizontal[y_index].append(current_rect)
-                    elif current_rect.colliderect(horizontal[y_index][-1]):
-                        # Les rect sont contigus
-                        horizontal[y_index][-1].width += tile
-                    else:
-                        # Les rect ne sont pas contigus
-                        horizontal[y_index].append(current_rect)
 
-        # Vertical check
-        for x in range(layout.get_width()):
-            x_index = x * tile
-            vertical[x_index] = []
-            for y in range(layout.get_height()):
-                color = layout.get_at([x, y])
-                if color == wall_color:
-                    current_rect = pg.Rect(x * tile, y * tile, tile + 1, tile + 1)
-                    if len(vertical[x_index]) == 0:
-                        # Liste vide, on rajoute le premier qu'on trouve
-                        vertical[x_index].append(current_rect)
-                    elif current_rect.colliderect(vertical[x_index][-1]):
-                        # Les rect sont contigus
-                        vertical[x_index][-1].height += tile
-                    else:
-                        # Les rect ne sont pas contigus
-                        vertical[x_index].append(current_rect)
-
-        wall_rect_list = []  # TODO : Maybe not a necessary variable
-
-        for y, rect_list in horizontal.items():
-            for rect in rect_list:
-                if rect.width > tile + 1:
-                    wall_rect_list.append(rect)
-        for x, rect_list in vertical.items():
-            for rect in rect_list:
-                if rect.height > tile + 1:
-                    wall_rect_list.append(rect)
-
-        for elt in wall_rect_list:
-            self.walls.add(Wall([elt.width, elt.height], [elt.left, elt.top]))

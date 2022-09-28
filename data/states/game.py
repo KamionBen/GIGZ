@@ -10,7 +10,7 @@ class Game(tools.State):
         self.next = 'pause'
         self.previous = 'menu'
 
-        self.gui_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
+        self.ui_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
         self.debug_surface = None
         self.debug = True
 
@@ -23,19 +23,38 @@ class Game(tools.State):
 
         self.font = pg.font.Font(None, 26)
 
-    def _update_gui(self):
-        self.gui_surface.fill((0, 0, 0, 0))
+    def _update_ui(self):
+        """ Show all the non-diegetic informations """
+        self.ui_surface.fill((0, 0, 0, 0))
         for i, g_player in enumerate(tools.State.players):
             big_font = prepare.FONTS['Biometric Joe'][58]
             medium_font = prepare.FONTS['Courier New Bold'][26]
             name_txt = big_font.render(g_player.name, True, g_player.color)
-            self.gui_surface.blit(name_txt, (50, 800))
+            self.ui_surface.blit(name_txt, (50, 800))
             infos = [g_player.survivor.status, str(g_player.survivor.health), str(g_player.survivor.weapon)]
             for n, info in enumerate(infos):
                 txt = medium_font.render(info, True, 'white')
-                self.gui_surface.blit(txt, (50, 850 + n * 25))
+                self.ui_surface.blit(txt, (50, 850 + n * 25))
+
+    def _in_level_coord(self, coord, span):
+        """ Return the coordinates corrected so they don't exit the level limits """
+        # Left and top limits
+        if coord[0] < span:
+            coord[0] = span
+        if coord[1] < span:
+            coord[1] = span
+
+        # Right and bottom limits
+        if coord[0] > tools.State.level.width - span:
+            coord[0] = tools.State.level.width - span
+        if coord[1] > tools.State.level.height - span:
+            coord[1] = tools.State.level.height - span
+
+        return coord
 
     def _check_level_limits(self, c_survivor):
+        """ Should check coordinates and return a correct value """
+        # TODO :
         if c_survivor.position[0] < c_survivor.radius:
             c_survivor.position[0] = c_survivor.radius
         if c_survivor.position[1] < c_survivor.radius:
@@ -47,6 +66,7 @@ class Game(tools.State):
             c_survivor.position[1] = self.level.height - c_survivor.radius
 
     def _check_wall_collision(self, rect, allwalls=True):
+        # TODO : Don't check all the walls
         collision = False
         for wall in self.level.walls:
             if wall.rect.colliderect(rect):
@@ -95,41 +115,45 @@ class Game(tools.State):
                     self.zombie_left[1] += 1
 
     def update(self):
+        # Check for pause
         for u_player in tools.State.players:
             if u_player.buttons['pause']:
                 self.set_pause()
                 break
+
+        # Spawn zombies in not already done
         self.spawn_zombies()
         if len(self.survivors) < len(tools.State.players):
             for play in tools.State.players:
                 self.survivors.add(play.survivor)
+
+        # Prepare screen and tick
         prepare.CLOCK.tick(prepare.FPS)
         prepare.SCREEN.fill('black')
+
+        # Check survivors projections for colllisions
         for surv in self.survivors:
             if surv.is_moving():
-                initial_pos = pg.Vector2(surv.position)
-                projection = surv.projection
-                projection_x = pg.Rect(0, 0 , 70, 70)
-                projection_x.center = initial_pos[0] + projection[0], initial_pos[1]
-                projection_y = pg.Rect(0, 0, 70, 70)
-                projection_y.center = initial_pos[0], initial_pos[1] + projection[1]
-                for wall in self.level.walls:
-                    if wall.rect.colliderect(projection_x):
-                        projection[0] = 0
-                    if wall.rect.colliderect(projection_y):
-                        projection[1] = 0
-                surv.position += projection
+                projection = pg.Vector2(surv.projection_x.rect.centerx,
+                                        surv.projection_y.rect.centery)
+                for chunk in surv.current_chunks:
+                    for wall in tools.State.level.chunks[chunk].walls:
+                        if pg.sprite.collide_mask(wall, surv.projection_x):
+                            projection.x = surv.projection_x.position.x
+                        if pg.sprite.collide_mask(wall, surv.projection_y):
+                            projection.y = surv.projection_y.position.y
+                surv.set_position(projection)
 
         self.survivors.update()
         self.control_zombies()
         self.zombies.update()
         self._update_camera()
         self._load_chunks()
-        self._update_gui()
+        self._update_ui()
         self.draw(prepare.SCREEN)
 
     def _load_chunks(self):
-        """ Recreate the cunk list from scratch """
+        """ Recreate the chunk list from scratch """
         self.loaded_chunks = []
         center_chunk_coord = int(self.camera[0] // (32 * 8)), int(self.camera[1] // (32 * 8))
         surroundings = []
@@ -158,22 +182,23 @@ class Game(tools.State):
         new_cam /= len(self.survivors)
         self.camera = new_cam
 
-    def camera_offset(self):
+    def _camera_offset(self):
         """ Return a value that need to be added to the sprite position """
         center = pg.Vector2(prepare.RESOLUTION[0] / 2, prepare.RESOLUTION[1] / 2)
         return -self.camera+center
 
     def draw(self, screen):
         # screen.fill('black')
-        for key in self.loaded_chunks:
-            chunk = self.level.chunks[key]
 
-            position = chunk.position + self.camera_offset()
+        # CHUNKS
+        for key in self.loaded_chunks:
+            chunk = tools.State.level.chunks[key]
+            position = chunk.position + self._camera_offset()
             screen.blit(chunk.image, position)
 
+        # SURVIVORS
         for i, surv in enumerate(self.survivors):
-
-            position = pg.math.Vector2(surv.position) + self.camera_offset()
+            position = pg.math.Vector2(surv.position) + self._camera_offset()
 
             pg.draw.circle(screen, (0, 0, 0, 128), position, surv.radius)  # Shadow
             # pg.draw.circle(screen, self.players[i].color, position, surv.radius + 10, 10)  # Player color
@@ -186,13 +211,16 @@ class Game(tools.State):
                             zombie.kickback(direction, 30)
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 
+        # ZOMBIES
         for zombie in self.zombies:
-            position = pg.Vector2(zombie.position) + self.camera_offset()
+            position = pg.Vector2(zombie.position) + self._camera_offset()
             pg.draw.circle(screen, (0, 0, 0, 128), position, zombie.radius)  # Shadow
             screen.blit(zombie.image, position - pg.Vector2(70, 70))
 
-        screen.blit(self.gui_surface, (0, 0))
+        # USER INTERFACE
+        screen.blit(self.ui_surface, (0, 0))
 
+        # DEBUG
         if self.debug:
             self._update_debug_surf()
             screen.blit(self.debug_surface, (0, 0))
@@ -211,7 +239,8 @@ class Game(tools.State):
                     f"FPS : {int(prepare.CLOCK.get_fps())}",
                     f"Loaded chunks : {len(self.loaded_chunks)}",
                     f"Zombies left : {len(self.zombies)}",
-                    f"Health : {[s.health for s in self.survivors]}"]
+                    f"Health : {[s.health for s in self.survivors]}",
+                    f"Player chunks : {[s.current_chunks for s in self.survivors]}"]
 
         for i, txt in enumerate(txt_list):
             btxt = self.font.render(txt, True, color)
@@ -236,6 +265,7 @@ class Game(tools.State):
 
     # Zombie control functions
     def control_zombies(self):
+        # TODO : Put in the zombie control class
         for zombie in self.zombies:
             if zombie.active and zombie.status != 'kickback':
                 if zombie.target is None:
@@ -264,6 +294,7 @@ class Game(tools.State):
 
     def _seek_target(self, zombie):
         """ The zombie is looking for someone to bite ! """
+        # TODO : Put in the zombiecontrol class
         target = None
         for surv in self.survivors:
             if target is None:
@@ -294,8 +325,3 @@ class Game(tools.State):
             i_player.set_survivor(new_survivor)
 
         self._update_camera()
-
-    def startup(self):
-        """ Function launched every time you exit the menu pause """
-        pass
-

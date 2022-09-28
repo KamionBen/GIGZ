@@ -212,3 +212,20 @@ class State:
 
     def get_event(self, event):
         pass
+
+
+class Projection(pg.sprite.Sprite):
+    def __init__(self, position, radius, offset):
+        """ A throwaway class to check for collision """
+        pg.sprite.Sprite.__init__(self)
+        self.position = position
+
+        self.image = pg.Surface((radius * 2, radius * 2), pg.SRCALPHA, 32)
+        pg.draw.circle(self.image, 'white', (radius, radius), radius)
+        self.rect = self.image.get_rect()
+        self.rect.center = position + offset
+        self.mask = pg.mask.from_surface(self.image)
+
+    def update(self, position, offset):
+        self.position = position
+        self.rect.center = position + offset
