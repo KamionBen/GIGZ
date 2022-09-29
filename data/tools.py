@@ -204,6 +204,9 @@ class State:
         self.quit = False
         self.previous = None
 
+    def draw(self, screen):
+        pass
+
     def startup(self):
         pass
 

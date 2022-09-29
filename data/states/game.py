@@ -64,7 +64,7 @@ class Game(tools.State):
 
         # Prepare screen and tick
         prepare.CLOCK.tick(prepare.FPS)
-        prepare.SCREEN.fill('black')
+
 
         # Check survivors projections for colllisions
         for surv in self.survivors:
@@ -109,10 +109,11 @@ class Game(tools.State):
 
     def _camera_offset(self):
         """ Return a value that need to be added to the sprite position """
-        center = pg.Vector2(prepare.RESOLUTION[0] / 2, prepare.RESOLUTION[1] / 2)
+        center = pg.Vector2(1920 / 2, 1080 / 2)
         return -self.camera+center
 
     def draw(self, screen):
+        screen.fill('black')
         self._draw_level(screen)
         self._draw_zombies(screen)
         self._draw_survivors(screen)
@@ -167,7 +168,7 @@ class Game(tools.State):
             screen.blit(btxt, (20, 20 + i * 30))
 
         # Center cross
-        res = prepare.RESOLUTION  # Sugar
+        res = 1920, 1080  # Sugar
         pg.draw.line(screen, 'black', (res[0] / 2 - 10, res[1] / 2), (res[0] / 2 + 10, res[1] / 2), 2)
         pg.draw.line(screen, 'black', (res[0] / 2, res[1] / 2 - 10), (res[0] / 2, res[1] / 2 + 10), 2)
 

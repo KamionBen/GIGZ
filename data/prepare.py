@@ -7,8 +7,6 @@ VERSION = '0.2.0'
 CAPTION = "GIGZ"
 RESOLUTION = 1920, 1080
 FPS = 60
-RATIO = 540 / RESOLUTION[1]
-
 
 # initialization
 pg.init()
@@ -30,11 +28,11 @@ ZOMBIE_SPRITESET = tools.load_json(os.path.join('data', 'spritesets', 'zombie.js
 for weapon, w_dict in SURVIVOR_SPRITESET.items():
     for status, s_dict in w_dict.items():
         for img in s_dict['files']:
-            IMAGES[img] = tools.scale_ratio(IMAGES[img], RATIO)
+            IMAGES[img] = tools.scale_ratio(IMAGES[img], .5)
 
 for status, s_dict in ZOMBIE_SPRITESET.items():
     for img in s_dict['files']:
-        IMAGES[img] = tools.scale_ratio(IMAGES[img], RATIO)
+        IMAGES[img] = tools.scale_ratio(IMAGES[img], .5)
 
 
 
