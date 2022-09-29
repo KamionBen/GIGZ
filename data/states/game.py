@@ -10,8 +10,6 @@ class Game(tools.State):
         self.next = 'pause'
         self.previous = 'menu'
 
-        self.debug = True
-
         self.survivors = pg.sprite.Group()
         self.zombies = pg.sprite.Group()
         self.zombie_left = [0, 0]  # Zombie left, zombie total
@@ -23,6 +21,7 @@ class Game(tools.State):
         self.big_font = prepare.FONTS['Biometric Joe'][58]
         self.medium_font = prepare.FONTS['Courier New Bold'][26]
 
+        self.debug = True
         self.game_started = False
 
     def startup(self):
@@ -98,11 +97,13 @@ class Game(tools.State):
             if key in self.level.chunks.keys():
                 self.loaded_chunks.append(key)
 
+        """ display only player chunks """
+        """
         self.loaded_chunks = []
         for player in tools.State.players:
             for key in player.survivor.current_chunks:
                 self.loaded_chunks.append(key)
-
+        """
     def _update_camera(self):
         new_cam = pg.math.Vector2(0, 0)
         for surv in self.survivors:

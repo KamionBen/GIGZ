@@ -72,7 +72,7 @@ class ZombieControl(ZombieSprite):
             self.cooldown += 1
             if self.cooldown < self.kickback_force:
                 self.position += self.kickback_direction
-                self._update_current_chunk()
+                self._update_current_chunks()
             else:
                 self.idle()
                 self.kickback_flag = False
@@ -92,13 +92,21 @@ class ZombieControl(ZombieSprite):
         self.kickback_force = force
         self.cooldown = 0
 
-    def _update_current_chunk(self):
-        self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"
-        # TODO : Maybe put a list of chunks here ?
+    def _update_current_chunks(self):
+        self.current_chunks = []
+        x, y = self.position[0], self.position[1]
+        r = self.radius * 2
+        topleft = f"{int((x - r) // 256)}.{int((y - r) // 256)}"
+        topright = f"{int((x + r) // 256)}.{int((y - r) // 256)}"
+        bottomleft = f"{int((x - r) // 256)}.{int((y + r) // 256)}"
+        bottomright = f"{int((x + r) // 256)}.{int((y + r) // 256)}"
+        for pos in [topleft, topright, bottomleft, bottomright]:
+            if pos not in self.current_chunks and pos in tools.State.level.chunks.keys():
+                self.current_chunks.append(pos)
 
     def move(self, vector):
         self.position += vector
-        self._update_current_chunk()
+        self._update_current_chunks()
         self.status = 'move'
         self.anim_status = 'move'
 
