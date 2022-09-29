@@ -29,7 +29,6 @@ class Game(tools.State):
         if self.game_started is False:
             self.start_game()
 
-
     def _in_level_coord(self, coord, span):
         """ Return the coordinates corrected so they don't exit the level limits """
         # Left and top limits
@@ -64,8 +63,6 @@ class Game(tools.State):
 
         # Prepare screen and tick
         prepare.CLOCK.tick(prepare.FPS)
-
-
         # Check survivors projections for colllisions
         for surv in self.survivors:
             if surv.is_moving():
@@ -83,7 +80,6 @@ class Game(tools.State):
         self.zombies.update()
         self._update_camera()
         self._load_chunks()
-        self.draw(prepare.SCREEN)
 
     def _load_chunks(self):
         """ Recreate the chunk list from scratch """
@@ -172,14 +168,13 @@ class Game(tools.State):
         pg.draw.line(screen, 'black', (res[0] / 2 - 10, res[1] / 2), (res[0] / 2 + 10, res[1] / 2), 2)
         pg.draw.line(screen, 'black', (res[0] / 2, res[1] / 2 - 10), (res[0] / 2, res[1] / 2 + 10), 2)
 
-
     # Event functions
     def get_event(self, event):
         """ Get the event and dispatch it to the correct function """
         if event.type in [pg.JOYAXISMOTION, pg.JOYBUTTONDOWN, pg.JOYBUTTONUP]:
-            player = self.players[event.joy]
-            player.get_event(event)
-            player.survivor.get_event(event)
+            e_player = self.players[event.joy]
+            e_player.get_event(event)
+            e_player.survivor.get_event(event)
 
     def set_pause(self):
         """ Pause game, switch to pause state """
