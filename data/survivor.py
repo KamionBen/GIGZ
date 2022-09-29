@@ -45,8 +45,8 @@ class SurvivorSprite(pg.sprite.Sprite):
         # Radius
         pg.draw.circle(self.image, 'green', (70, 70), self.radius, 1)
         # Projection
-        direction = self.projection.copy()
-        if direction.length_squared() > 0:
+        direction = self.leftstick.copy()
+        if direction.length_squared() > .3**2:
             direction.scale_to_length(200)
             pg.draw.line(self.image, 'blue', (70, 70), (70, 70) + direction, 1)
         # Orientation
@@ -86,13 +86,15 @@ class SurvivorControl(SurvivorSprite):
         self.projection_x = tools.Projection(self.position, self.radius, (self.leftstick.x * self.speed, 0))
         self.projection_y = tools.Projection(self.position, self.radius, (0, self.leftstick.y * self.speed))
 
-    def update_current_chunks(self):
+    def _update_current_chunks(self):
         """ Update the chunks where the game need to check for collision"""
         self.current_chunks = []
-        topleft = f"{int((self.position[0]-self.radius) // 256)}.{int((self.position[1]-self.radius) // 256)}"
-        topright = f"{int((self.position[0]+self.radius) // 256)}.{int((self.position[1]-self.radius) // 256)}"
-        bottomleft = f"{int((self.position[0]-self.radius) // 256)}.{int((self.position[1]+self.radius) // 256)}"
-        bottomright = f"{int((self.position[0]+self.radius) // 256)}.{int((self.position[1]+self.radius) // 256)}"
+        x, y = self.position[0], self.position[1]
+        r = self.radius
+        topleft = f"{int((x - r) // 256)}.{int((y - r) // 256)}"
+        topright = f"{int((x + r) // 256)}.{int((y - r) // 256)}"
+        bottomleft = f"{int((x - r) // 256)}.{int((y + r) // 256)}"
+        bottomright = f"{int((x + r) // 256)}.{int((y + r) // 256)}"
         for pos in [topleft, topright, bottomleft, bottomright]:
             if pos not in self.current_chunks:
                 self.current_chunks.append(pos)
@@ -119,7 +121,7 @@ class SurvivorControl(SurvivorSprite):
     def update(self):
         """ Check the controls and trigger actions """
         """ Priority : idle < move < shoot < reload < meleeattack """
-        self.update_current_chunks()
+        self._update_current_chunks()
 
         if self.leftstick.length_squared() > .3**2:
             # Left stick = movement + orientation
