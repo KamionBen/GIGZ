@@ -107,7 +107,7 @@ class MainMenu(tools.State):
                 player_surf.blit(ready, (300 - ready.get_width() / 2, 200))
 
                 # Final blit
-                screen.blit(player_surf, (1920 / (len(self.joysticks) + 1) - 300, 700))
+                screen.blit(player_surf, (1920 / (len(self.joysticks) + 1) - 300 + i * 600, 700))
 
     def _draw_options(self, screen):
         center_x = 1920/2
