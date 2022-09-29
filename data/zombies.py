@@ -13,7 +13,7 @@ class ZombieSprite(pg.sprite.Sprite):
         self.anim_speed = .2
         self.orientation = 0
 
-        self.position = position
+        self.position = pg.Vector2(position)
 
         self.image = pg.Surface((140, 140), pg.SRCALPHA, 32)
         self.radius = 35
@@ -55,33 +55,38 @@ class ZombieControl(ZombieSprite):
         self.active = False
         self.on_screen = False
 
-        self.current_chunk = f"{int(self.position[0] // 256)}.{int(self.position[1] // 256)}"
         self.kickback_flag = False
         self.kickback_force = 0
         self.kickback_direction = (0, 0)
 
+        self.current_chunks = []
+        self._update_current_chunks()
         self.update_sprite()
 
-    def update(self):
-        if self.status == 'attack':
-            self.cooldown += 1
-            if self.cooldown >= self.attack_speed:
-                self.cooldown = 0
-                self.idle()
-        if self.status == 'kickback':
-            self.cooldown += 1
-            if self.cooldown < self.kickback_force:
-                self.position += self.kickback_direction
-                self._update_current_chunks()
-            else:
-                self.idle()
-                self.kickback_flag = False
+        self.projection = tools.Projection(self.position, self.radius, (0, 0))
 
-        if self.target is not None:
-            angle = pg.Vector2(self.position).angle_to(pg.Vector2(self.target.position)-self.position)
-            self.orientation = 315-angle
-        if self.on_screen:
-            self.update_sprite()
+    def update(self):
+        if self.active:
+            if self.status == 'attack':
+                self.cooldown += 1
+                if self.cooldown >= self.attack_speed:
+                    self.cooldown = 0
+                    self.idle()
+            if self.status == 'kickback':
+                self.cooldown += 1
+                if self.cooldown < self.kickback_force:
+                    self.position += self.kickback_direction
+                    self._update_current_chunks()
+                else:
+                    self.idle()
+                    self.kickback_flag = False
+
+            if self.target is not None:
+                angle = self.position.angle_to(self.target.position-self.position)
+                self.orientation = 315-angle
+            if self.on_screen:
+                pass
+                #self.update_sprite()
 
     def kickback(self, direction, force):
         """ The zombie took some damages and move back for a while """
@@ -121,4 +126,23 @@ class ZombieControl(ZombieSprite):
 
     def activate(self):
         self.active = True
+        self.seek_target()
+
+    def set_target(self, targeted_survivor):
+        self.target = targeted_survivor
+
+    def seek_target(self):
+        """ Find the closest survivor """
+        target = None
+        for player in tools.State.players:
+            if target is None:
+                target = player.survivor
+            else:
+                new_distance = self.position.distance_squared_to(player.survivor.position)
+                current_distance = self.position.distance_squared_to(target.position)
+                if new_distance < current_distance:
+                    target = player.survivor
+        self.set_target(target)
+
+
 

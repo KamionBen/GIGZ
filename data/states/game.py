@@ -53,6 +53,22 @@ class Game(tools.State):
                 self.zombie_left[0] += 1
                 self.zombie_left[1] += 1
 
+    def check_collision(self, item, chunks, ignore=()):
+        collision = False
+        for chunk in chunks:
+            if 'walls' not in ignore:
+                for wall in tools.State.level.chunks[chunk].walls:
+                    if pg.sprite.collide_mask(wall, item):
+                        collision = True
+                        break
+            if 'zombies' not in ignore:
+                for zombie in self.zombies:
+                    if chunk in zombie.current_chunks:
+                        if pg.sprite.collide_mask(zombie.projection, item):
+                            collision = True
+                            break
+        return collision
+
     def update(self):
         # Check for pause
         for u_player in tools.State.players:
@@ -68,13 +84,21 @@ class Game(tools.State):
                 projection = pg.Vector2(surv.projection_x.rect.centerx,
                                         surv.projection_y.rect.centery)
                 projection = self._in_level_coord(projection, surv.radius)
-                for chunk in surv.current_chunks:
-                    for wall in tools.State.level.chunks[chunk].walls:
-                        if pg.sprite.collide_mask(wall, surv.projection_x):
-                            projection.x = surv.projection_x.position.x
-                        if pg.sprite.collide_mask(wall, surv.projection_y):
-                            projection.y = surv.projection_y.position.y
+                if self.check_collision(surv.projection_x, surv.current_chunks):
+                    projection.x = surv.projection_x.position.x
+                if self.check_collision(surv.projection_y, surv.current_chunks):
+                    projection.y = surv.projection_y.position.y
+
                 surv.set_position(projection)
+
+        for zombie in self.zombies:
+            on_screen = False
+            for z_chunk in zombie.current_chunks:
+                if z_chunk in self.loaded_chunks:
+                    on_screen = True
+            zombie.on_screen = on_screen
+            if on_screen and zombie.active is False:
+                zombie.activate()
 
         self.survivors.update()
         self.zombies.update()
