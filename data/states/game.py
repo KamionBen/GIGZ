@@ -68,6 +68,7 @@ class Game(tools.State):
             if surv.is_moving():
                 projection = pg.Vector2(surv.projection_x.rect.centerx,
                                         surv.projection_y.rect.centery)
+                projection = self._in_level_coord(projection, surv.radius)
                 for chunk in surv.current_chunks:
                     for wall in tools.State.level.chunks[chunk].walls:
                         if pg.sprite.collide_mask(wall, surv.projection_x):
@@ -90,10 +91,16 @@ class Game(tools.State):
         for y in range(-3, 3):
             for x in range(-4, 5):
                 surroundings.append((x, y))
+
         for surround in surroundings:
             coord = pg.math.Vector2(surround) + pg.Vector2(center_chunk_coord)
             key = f"{int(coord[0])}.{int(coord[1])}"
             if key in self.level.chunks.keys():
+                self.loaded_chunks.append(key)
+
+        self.loaded_chunks = []
+        for player in tools.State.players:
+            for key in player.survivor.current_chunks:
                 self.loaded_chunks.append(key)
 
     def _update_camera(self):

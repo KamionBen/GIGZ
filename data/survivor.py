@@ -90,13 +90,13 @@ class SurvivorControl(SurvivorSprite):
         """ Update the chunks where the game need to check for collision"""
         self.current_chunks = []
         x, y = self.position[0], self.position[1]
-        r = self.radius
+        r = self.radius * 2
         topleft = f"{int((x - r) // 256)}.{int((y - r) // 256)}"
         topright = f"{int((x + r) // 256)}.{int((y - r) // 256)}"
         bottomleft = f"{int((x - r) // 256)}.{int((y + r) // 256)}"
         bottomright = f"{int((x + r) // 256)}.{int((y + r) // 256)}"
         for pos in [topleft, topright, bottomleft, bottomright]:
-            if pos not in self.current_chunks:
+            if pos not in self.current_chunks and pos in tools.State.level.chunks.keys():
                 self.current_chunks.append(pos)
 
     def get_event(self, event):
