@@ -10,8 +10,6 @@ class Game(tools.State):
         self.next = 'pause'
         self.previous = 'menu'
 
-        self.ui_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
-        self.debug_surface = None
         self.debug = True
 
         self.survivors = pg.sprite.Group()
@@ -22,6 +20,8 @@ class Game(tools.State):
         self.loaded_chunks = []
 
         self.font = pg.font.Font(None, 26)
+        self.big_font = prepare.FONTS['Biometric Joe'][58]
+        self.medium_font = prepare.FONTS['Courier New Bold'][26]
 
         self.game_started = False
 
@@ -29,18 +29,6 @@ class Game(tools.State):
         if self.game_started is False:
             self.start_game()
 
-    def _update_ui(self):
-        """ Show all the non-diegetic informations """
-        self.ui_surface.fill((0, 0, 0, 0))
-        for i, g_player in enumerate(tools.State.players):
-            big_font = prepare.FONTS['Biometric Joe'][58]
-            medium_font = prepare.FONTS['Courier New Bold'][26]
-            name_txt = big_font.render(g_player.name, True, g_player.color)
-            self.ui_surface.blit(name_txt, (50, 800))
-            infos = [g_player.survivor.status, str(g_player.survivor.health), str(g_player.survivor.weapon)]
-            for n, info in enumerate(infos):
-                txt = medium_font.render(info, True, 'white')
-                self.ui_surface.blit(txt, (50, 850 + n * 25))
 
     def _in_level_coord(self, coord, span):
         """ Return the coordinates corrected so they don't exit the level limits """
@@ -95,7 +83,6 @@ class Game(tools.State):
         self.zombies.update()
         self._update_camera()
         self._load_chunks()
-        self._update_ui()
         self.draw(prepare.SCREEN)
 
     def _load_chunks(self):
@@ -126,15 +113,20 @@ class Game(tools.State):
         return -self.camera+center
 
     def draw(self, screen):
-        # screen.fill('black')
+        self._draw_level(screen)
+        self._draw_zombies(screen)
+        self._draw_survivors(screen)
+        self._draw_interface(screen)
+        if self.debug:
+            self._draw_debug(screen)
 
-        # CHUNKS
+    def _draw_level(self, screen):
         for key in self.loaded_chunks:
             chunk = tools.State.level.chunks[key]
             position = chunk.position + self._camera_offset()
             screen.blit(chunk.image, position)
 
-        # SURVIVORS
+    def _draw_survivors(self, screen):
         for i, surv in enumerate(self.survivors):
             position = pg.math.Vector2(surv.position) + self._camera_offset()
 
@@ -142,25 +134,22 @@ class Game(tools.State):
             # pg.draw.circle(screen, self.players[i].color, position, surv.radius + 10, 10)  # Player color
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 
-        # ZOMBIES
+    def _draw_zombies(self, screen):
         for zombie in self.zombies:
             position = pg.Vector2(zombie.position) + self._camera_offset()
             pg.draw.circle(screen, (0, 0, 0, 128), position, zombie.radius)  # Shadow
             screen.blit(zombie.image, position - pg.Vector2(70, 70))
 
-        # USER INTERFACE
-        screen.blit(self.ui_surface, (0, 0))
+    def _draw_interface(self, screen):
+        for i, g_player in enumerate(tools.State.players):
+            name_txt = self.big_font.render(g_player.name, True, g_player.color)
+            screen.blit(name_txt, (50, 800))
+            infos = [g_player.survivor.status, str(g_player.survivor.health), str(g_player.survivor.weapon)]
+            for n, info in enumerate(infos):
+                txt = self.medium_font.render(info, True, 'white')
+                screen.blit(txt, (50, 850 + n * 25))
 
-        # DEBUG
-        if self.debug:
-            self._update_debug_surf()
-            screen.blit(self.debug_surface, (0, 0))
-
-    def _update_debug_surf(self):
-        self.debug_surface = pg.Surface(prepare.RESOLUTION, pg.SRCALPHA, 32)
-
-        color = 'white'
-
+    def _draw_debug(self, screen):
         txt_list = [f"Level name : {self.level.name}",
                     f"Difficulty : {self.level.difficulty}",
                     f"Zombie number : {self.level.zombie_number}",
@@ -174,13 +163,14 @@ class Game(tools.State):
                     f"Player chunks : {[s.current_chunks for s in self.survivors]}"]
 
         for i, txt in enumerate(txt_list):
-            btxt = self.font.render(txt, True, color)
-            self.debug_surface.blit(btxt, (20, 20 + i * 30))
+            btxt = self.font.render(txt, True, 'white')
+            screen.blit(btxt, (20, 20 + i * 30))
 
         # Center cross
         res = prepare.RESOLUTION  # Sugar
-        pg.draw.line(self.debug_surface, 'black', (res[0]/2 - 10, res[1]/2), (res[0]/2 + 10, res[1]/2), 2)
-        pg.draw.line(self.debug_surface, 'black', (res[0]/2, res[1]/2 - 10), (res[0]/2, res[1]/2 + 10), 2)
+        pg.draw.line(screen, 'black', (res[0] / 2 - 10, res[1] / 2), (res[0] / 2 + 10, res[1] / 2), 2)
+        pg.draw.line(screen, 'black', (res[0] / 2, res[1] / 2 - 10), (res[0] / 2, res[1] / 2 + 10), 2)
+
 
     # Event functions
     def get_event(self, event):
