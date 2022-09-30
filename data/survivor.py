@@ -166,6 +166,7 @@ class SurvivorControl(SurvivorSprite):
         self.status = 'shoot'
         self.anim_status = 'shoot'
         self.shoot_flag = False
+        tools.State.trigger_list.append(tools.Trigger('shoot', survivor=self))
 
     def release_the_trigger(self):
         self.shoot_flag = True

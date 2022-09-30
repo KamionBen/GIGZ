@@ -135,10 +135,14 @@ class Level:
             for index, walllist in horizontal.items():
                 for rect in walllist:
                     if rect.width > tile_size + 1:
-                        chunk.walls.add(Wall(rect.x, rect.y, rect.width, rect.height))
+                        wall = Wall(rect.x, rect.y, rect.width, rect.height)
+                        self.walls.add(wall)
+                        chunk.walls.add(wall)
             for walllist in vertical.values():
                 for rect in walllist:
                     if rect.height > tile_size + 1:
-                        chunk.walls.add(Wall(rect.x, rect.y, rect.width, rect.height))
+                        wall = Wall(rect.x, rect.y, rect.width, rect.height)
+                        self.walls.add(wall)
+                        chunk.walls.add(wall)
 
 

@@ -16,6 +16,7 @@ class ZombieSprite(pg.sprite.Sprite):
         self.position = pg.Vector2(position)
 
         self.image = pg.Surface((140, 140), pg.SRCALPHA, 32)
+
         self.radius = 35
 
     def get_current_spritename(self):
@@ -44,6 +45,7 @@ class ZombieControl(ZombieSprite):
 
         self.status = 'idle'
         self.speed = self._speed_base
+        self.health = [100, 100]
 
         self.force = 35
         self.attack_speed = 36  # Actually attack duration
@@ -63,7 +65,9 @@ class ZombieControl(ZombieSprite):
         self._update_current_chunks()
         self.update_sprite()
 
+        self.hitbox = tools.Projection(self.position, self.radius, (0, 0))
         self.projection = tools.Projection(self.position, self.radius, (0, 0))
+        self.rect = self.image.get_rect()
 
     def update(self):
         if self.active:
@@ -74,6 +78,15 @@ class ZombieControl(ZombieSprite):
                 self.projection.update(self.position, direction)
             if self.on_screen:
                 self.update_sprite()
+
+    def take_damages(self, damages):
+        self.health[0] -= damages
+        if self.health[0] <= 0:
+            self.health[0] = 0
+
+    def is_dead(self):
+        return self.health[0] == 0
+
 
     def kickback(self, direction, force):
         """ The zombie took some damages and move back for a while """

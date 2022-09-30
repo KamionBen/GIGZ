@@ -1,5 +1,5 @@
 import pygame as pg
-from random import choice
+from random import choice, randrange
 from .. import tools, prepare, level, player, survivor, zombies
 
 
@@ -23,6 +23,8 @@ class Game(tools.State):
 
         self.debug = True
         self.game_started = False
+
+        self.effect_list = []
 
     def startup(self):
         if self.game_started is False:
@@ -96,18 +98,65 @@ class Game(tools.State):
                 surv.set_position(projection)
 
         for zombie in self.zombies:
-            on_screen = False
-            for z_chunk in zombie.current_chunks:
-                if z_chunk in self.loaded_chunks:
-                    on_screen = True
-            zombie.on_screen = on_screen
-            if on_screen and zombie.active is False:
-                zombie.activate()
+            if zombie.is_dead():
+                self.zombies.remove(zombie)
+            else:
+                on_screen = False
+                for z_chunk in zombie.current_chunks:
+                    if z_chunk in self.loaded_chunks:
+                        on_screen = True
+                zombie.on_screen = on_screen
+                if on_screen and zombie.active is False:
+                    zombie.activate()
 
         self.survivors.update()
         self.zombies.update()
         self._update_camera()
         self._load_chunks()
+
+        while len(self.trigger_list) > 0:
+            trigger = self.trigger_list.pop(0)
+            if trigger.genre == 'shoot':
+                t_survivor = trigger['survivor']
+                start = survivor.weapon_offset[t_survivor.weapon_img].rotate(-t_survivor.orientation)
+                start += t_survivor.position
+                end = pg.Vector2(2000, survivor.weapon_offset[t_survivor.weapon_img][1]).rotate(-t_survivor.orientation)
+                end += t_survivor.position
+
+                on_sight = []
+
+                for zombie in self.zombies:
+                    clipline = zombie.hitbox.rect.clipline(start, end)
+                    if clipline:
+                        clip_s, clip_e = clipline
+                        distance_sq = pg.Vector2(start, clip_s).length_squared()
+                        on_sight.append((zombie, distance_sq))
+                for wall in tools.State.level.walls:
+                    clipline = wall.rect.clipline(start, end)
+                    if clipline:
+                        clip_s, clip_e = clipline
+                        distance_sq = pg.Vector2(start, clip_s).length_squared()
+                        on_sight.append((wall, distance_sq))
+
+                on_sight.sort(key=lambda x: x[1], reverse=True)
+
+                if len(on_sight) > 0:
+                    first = on_sight[0]
+                    if type(first[0]) == zombies.ZombieControl:
+                        cl_start, cl_end = first[0].hitbox.rect.clipline(start, end)
+                        first[0].take_damages(t_survivor.weapon.damages)
+                    else:
+                        cl_start, cl_end = first[0].rect.clipline(start, end)
+                    self.effect_list.append(['round', cl_start])
+
+
+
+
+
+                rand = randrange(1,6)
+                b_start = start + (end-start) * (rand/10)
+                b_end = start + (end-start) * ((rand/10) + .05)
+                self.effect_list.append(['bullet', b_start, b_end])
 
     def _load_chunks(self):
         """ Recreate the chunk list from scratch """
@@ -149,9 +198,18 @@ class Game(tools.State):
         self._draw_level(screen)
         self._draw_zombies(screen)
         self._draw_survivors(screen)
+        self._draw_effects(screen)
         self._draw_interface(screen)
         if self.debug:
             self._draw_debug(screen)
+
+    def _draw_effects(self, screen):
+        while len(self.effect_list) > 0:
+            effect = self.effect_list.pop(0)
+            if effect[0] == 'bullet':
+                pg.draw.line(screen, 'black', effect[1] + self._camera_offset(), effect[2] + self._camera_offset())
+            if effect[0] == 'round':
+                pg.draw.circle(screen, 'orange', effect[1] + self._camera_offset(), 5)
 
     def _draw_level(self, screen):
         for key in self.loaded_chunks:
@@ -171,7 +229,7 @@ class Game(tools.State):
             end = pg.Vector2(500, survivor.weapon_offset[surv.weapon_img][1]).rotate(-surv.orientation)
             end += surv.position + self._camera_offset()
 
-            pg.draw.line(screen, 'red', start, end)
+            #pg.draw.line(screen, 'red', start, end)
 
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 

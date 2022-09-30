@@ -197,6 +197,7 @@ class State:
     players = []
     joysticks = []
     level = None
+    trigger_list = []  # Handle custom events
 
     def __init__(self):
         self.done = False
@@ -216,6 +217,14 @@ class State:
     def get_event(self, event):
         pass
 
+
+class Trigger:
+    def __init__(self, genre, **kwargs):
+        self.genre = genre
+        self.dict = {key: value for key, value in kwargs.items()}
+
+    def __getitem__(self, item):
+        return self.dict[item]
 
 class Projection(pg.sprite.Sprite):
     def __init__(self, position, radius, offset):
