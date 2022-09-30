@@ -49,12 +49,16 @@ class Game(tools.State):
             while self.zombie_left[1] < self.level.zombie_number:
                 # TODO : Check for collision
                 spawn = choice(self.level.zombies_spawns)
-                self.zombies.add(zombies.ZombieControl(spawn))
-                self.zombie_left[0] += 1
-                self.zombie_left[1] += 1
+                rect = pg.Rect(spawn[0]+35, spawn[1]+35, 70, 70)
+                if self.check_collision(rect, 'all') is False:
+                    self.zombies.add(zombies.ZombieControl(spawn))
+                    self.zombie_left[0] += 1
+                    self.zombie_left[1] += 1
 
     def check_collision(self, item, chunks, ignore=()):
         collision = False
+        if chunks == 'all':
+            chunks = tools.State.level.chunks
         for chunk in chunks:
             if 'walls' not in ignore:
                 for wall in tools.State.level.chunks[chunk].walls:
@@ -161,6 +165,14 @@ class Game(tools.State):
 
             pg.draw.circle(screen, (0, 0, 0, 128), position, surv.radius)  # Shadow
             # pg.draw.circle(screen, self.players[i].color, position, surv.radius + 10, 10)  # Player color
+            # Fire line
+            start = survivor.weapon_offset[surv.weapon_img].rotate(-surv.orientation)
+            start += surv.position + self._camera_offset()
+            end = pg.Vector2(500, survivor.weapon_offset[surv.weapon_img][1]).rotate(-surv.orientation)
+            end += surv.position + self._camera_offset()
+
+            pg.draw.line(screen, 'red', start, end)
+
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 
     def _draw_zombies(self, screen):

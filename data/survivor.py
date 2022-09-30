@@ -1,6 +1,7 @@
 import pygame as pg
 from . import tools, prepare
 
+weapon_offset = {'handgun': pg.Vector2(56, 28)}
 
 class SurvivorSprite(pg.sprite.Sprite):
     def __init__(self, position=None):
@@ -8,7 +9,7 @@ class SurvivorSprite(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self)
 
         self.spriteset = prepare.SURVIVOR_SPRITESET
-        self.weapon_img = 'handgun'
+        self.weapon_img = None
         self.anim_status = 'idle'
         self.anim_speed = .5
         self.sprite_index = 0
@@ -25,7 +26,11 @@ class SurvivorSprite(pg.sprite.Sprite):
         # TODO Penser aux jambes ?
 
     def get_current_spritename(self):
-        return self.spriteset[self.weapon_img][self.anim_status]['files'][int(self.sprite_index)]
+        if self.weapon_img is None:
+            weapon = 'flashlight'
+        else:
+            weapon = self.weapon_img
+        return self.spriteset[weapon][self.anim_status]['files'][int(self.sprite_index)]
 
     def update_sprite(self):
         self.sprite_index += self.anim_speed
@@ -72,9 +77,9 @@ class SurvivorControl(SurvivorSprite):
         self.health = [100, 100]
 
         self.cooldown = 0
-        self.meleeattack_flag = True
         self.move_flag = False
         self.shoot_flag = True
+        self.meleeattack_flag = True
 
         # Control
         self.leftstick = pg.Vector2(0, 0)
@@ -85,6 +90,11 @@ class SurvivorControl(SurvivorSprite):
         self.current_chunks = []
         self.projection_x = tools.Projection(self.position, self.radius, (self.leftstick.x * self.speed, 0))
         self.projection_y = tools.Projection(self.position, self.radius, (0, self.leftstick.y * self.speed))
+
+    def draw(self, surface):
+        self.image.fill('pink')
+        surface.blit(self.image, (200,200))
+
 
     def _update_current_chunks(self):
         """ Update the chunks where the game need to check for collision"""
@@ -143,12 +153,22 @@ class SurvivorControl(SurvivorSprite):
             self.orientation = -angle.angle_to(self.rightstick)
 
         if self.righttrigger > .9 and self.shoot_flag:
-            self.set_status('shoot')
+            self.press_the_trigger()
+        elif self.righttrigger < .5:
+            self.release_the_trigger()
 
         if self.lefttrigger > .9 and self.meleeattack_flag:
             self.meleeattack()
 
         self.update_sprite()
+
+    def press_the_trigger(self):
+        self.status = 'shoot'
+        self.anim_status = 'shoot'
+        self.shoot_flag = False
+
+    def release_the_trigger(self):
+        self.shoot_flag = True
 
     def get_damages(self, damages):
         self.health[0] -= damages
