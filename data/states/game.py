@@ -108,6 +108,9 @@ class Game(tools.State):
                 zombie.on_screen = on_screen
                 if on_screen and zombie.active is False:
                     zombie.activate()
+                if zombie.active:
+                    if zombie.target is None:
+                        zombie.seek_target()
 
         self.survivors.update()
         self.zombies.update()
@@ -122,36 +125,9 @@ class Game(tools.State):
                 start += t_survivor.position
                 end = pg.Vector2(2000, survivor.weapon_offset[t_survivor.weapon_img][1]).rotate(-t_survivor.orientation)
                 end += t_survivor.position
-
-                on_sight = []
-
-                for zombie in self.zombies:
-                    clipline = zombie.hitbox.rect.clipline(start, end)
-                    if clipline:
-                        clip_s, clip_e = clipline
-                        distance_sq = pg.Vector2(start, clip_s).length_squared()
-                        on_sight.append((zombie, distance_sq))
-                for wall in tools.State.level.walls:
-                    clipline = wall.rect.clipline(start, end)
-                    if clipline:
-                        clip_s, clip_e = clipline
-                        distance_sq = pg.Vector2(start, clip_s).length_squared()
-                        on_sight.append((wall, distance_sq))
-
-                on_sight.sort(key=lambda x: x[1], reverse=True)
-
-                if len(on_sight) > 0:
-                    first = on_sight[0]
-                    if type(first[0]) == zombies.ZombieControl:
-                        cl_start, cl_end = first[0].hitbox.rect.clipline(start, end)
-                        first[0].take_damages(t_survivor.weapon.damages)
-                    else:
-                        cl_start, cl_end = first[0].rect.clipline(start, end)
-                    self.effect_list.append(['round', cl_start])
-
-
-
-
+                _, _, target = self._get_sightline(start, end)
+                if type(target) is zombies.ZombieControl:
+                    target.take_damages(t_survivor.weapon.damages)
 
                 rand = randrange(1,6)
                 b_start = start + (end-start) * (rand/10)
@@ -223,15 +199,49 @@ class Game(tools.State):
 
             pg.draw.circle(screen, (0, 0, 0, 128), position, surv.radius)  # Shadow
             # pg.draw.circle(screen, self.players[i].color, position, surv.radius + 10, 10)  # Player color
-            # Fire line
-            start = survivor.weapon_offset[surv.weapon_img].rotate(-surv.orientation)
-            start += surv.position + self._camera_offset()
-            end = pg.Vector2(500, survivor.weapon_offset[surv.weapon_img][1]).rotate(-surv.orientation)
-            end += surv.position + self._camera_offset()
+            # Draw Laser pointer
+            start = survivor.weapon_offset[surv.weapon_img].rotate(-surv.orientation) + surv.position
+            end = pg.Vector2(2000, survivor.weapon_offset[surv.weapon_img][1]).rotate(-surv.orientation) + surv.position
 
-            #pg.draw.line(screen, 'red', start, end)
+            n_start, n_end, _ = self._get_sightline(start, end)
+            pg.draw.line(screen, 'red', n_start + self._camera_offset(), n_end + self._camera_offset())
+            pg.draw.circle(screen, 'red', n_end + self._camera_offset(), 2)
 
             screen.blit(surv.image, position - pg.Vector2(70, 70))
+
+    def _get_sightline(self, start_pos, end_pos, allied=False):
+        """ Return the sightline used for laser pointer and tracer bullets """
+        on_sight = []
+        for zombie in self.zombies:
+            clipline = zombie.hitbox.rect.clipline(start_pos, end_pos)
+            if clipline:
+                clip_s, clip_e = clipline
+                distance_sq = start_pos.distance_squared_to(clip_s)
+                on_sight.append((zombie, distance_sq, clip_s))
+        for wall in tools.State.level.walls:
+            clipline = wall.rect.clipline(start_pos, end_pos)
+            if clipline:
+                clip_s, clip_e = clipline
+                distance_sq = start_pos.distance_squared_to(clip_s)
+                on_sight.append((wall, distance_sq, clip_s))
+
+        if allied:
+            for surv in self.survivors:
+                clipline = surv.rect.clipline(start_pos, end_pos)
+                if clipline:
+                    clip_s, _ = clipline
+                    distance_sq = start_pos.distance_squared_to(clip_s)
+                    on_sight.append((surv, distance_sq, clip_s))
+
+        on_sight.sort(key=lambda x: x[1])
+        if len(on_sight) > 0:
+            item = on_sight[0][0]
+            impact = on_sight[0][2]
+        else:
+            item = None
+            impact = end_pos
+
+        return start_pos, impact, item
 
     def _draw_zombies(self, screen):
         for zombie in self.zombies:
@@ -269,6 +279,7 @@ class Game(tools.State):
         res = 1920, 1080  # Sugar
         pg.draw.line(screen, 'black', (res[0] / 2 - 10, res[1] / 2), (res[0] / 2 + 10, res[1] / 2), 2)
         pg.draw.line(screen, 'black', (res[0] / 2, res[1] / 2 - 10), (res[0] / 2, res[1] / 2 + 10), 2)
+
 
     # Event functions
     def get_event(self, event):

@@ -18,6 +18,7 @@ class ZombieSprite(pg.sprite.Sprite):
         self.image = pg.Surface((140, 140), pg.SRCALPHA, 32)
 
         self.radius = 35
+        self.hit = False
 
     def get_current_spritename(self):
         return self.spriteset[self.anim_status]['files'][int(self.sprite_index)]
@@ -33,6 +34,8 @@ class ZombieSprite(pg.sprite.Sprite):
         rotated = pg.transform.rotate(img, self.orientation)
         # TODO : Rotate around the actual center
         self.image.blit(rotated, (70 - rotated.get_width() / 2, 70 - rotated.get_height() / 2))
+        if self.hit:
+            self.image.fill('red')
 
     def set_position(self, new_position):
         self.position = new_position
@@ -87,7 +90,6 @@ class ZombieControl(ZombieSprite):
     def is_dead(self):
         return self.health[0] == 0
 
-
     def kickback(self, direction, force):
         """ The zombie took some damages and move back for a while """
         self.kickback_flag = True
@@ -108,12 +110,6 @@ class ZombieControl(ZombieSprite):
         for pos in [topleft, topright, bottomleft, bottomright]:
             if pos not in self.current_chunks and pos in tools.State.level.chunks.keys():
                 self.current_chunks.append(pos)
-
-    def move(self, vector):
-        self.position += vector
-        self._update_current_chunks()
-        self.status = 'move'
-        self.anim_status = 'move'
 
     def idle(self):
         self.status = 'idle'
