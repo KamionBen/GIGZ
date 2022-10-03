@@ -5,11 +5,12 @@ from data.states import menu, game, pause
 
 app = control.Control()
 states_dict = {
-    'menu': menu.MainMenu(),
+    'mainmenu': menu.MainMenu(),
     'game': game.Game(),
-    'pause': pause.Pause()
+    'gamemenu': pause.GameMenu(),
+    'pausemenu': pause.PauseMenu()
 }
-app.setup_states(states_dict, 'menu')
+app.setup_states(states_dict, 'mainmenu')
 app.main_game_loop()
 pg.quit()
 sys.exit()

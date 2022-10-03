@@ -150,6 +150,10 @@ class Options:
     def is_selected(self, name):
         return name == self.names[self.cursor]
 
+    def selected(self):
+        """ Return the currently selected option """
+        return self.names[self.cursor]
+
     def change_cursor(self, incr, loop=True):
         """ Change the selected option """
         self.cursor += incr

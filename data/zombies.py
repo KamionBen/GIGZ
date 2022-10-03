@@ -38,7 +38,7 @@ class ZombieSprite(pg.sprite.Sprite):
             self.image.fill('red')
 
     def set_position(self, new_position):
-        self.position = new_position
+        self.position = pg.Vector2(new_position)
 
 
 class ZombieControl(ZombieSprite):
@@ -69,7 +69,10 @@ class ZombieControl(ZombieSprite):
         self.update_sprite()
 
         self.hitbox = tools.Projection(self.position, self.radius, (0, 0))
-        self.projection = tools.Projection(self.position, self.radius, (0, 0))
+
+        self.projection_x = tools.Projection(self.position, self.radius, (0, 0))
+        self.projection_y = tools.Projection(self.position, self.radius, (0, 0))
+
         self.rect = self.image.get_rect()
 
     def update(self):
@@ -77,10 +80,14 @@ class ZombieControl(ZombieSprite):
             if self.target is not None:
                 angle = self.position.angle_to(self.target.position-self.position)
                 self.orientation = 315-angle
-                direction = pg.Vector2(self.speed, 0).rotate(self.orientation)
-                self.projection.update(self.position, direction)
+                direction = pg.Vector2(self.speed, 0).rotate(-self.orientation)
+                self.projection_x.update(self.position, (direction.x, 0))
+                self.projection_y.update(self.position, (0, direction.y))
+                self.hitbox.update(self.position, (0,0))
+
             if self.on_screen:
                 self.update_sprite()
+
 
     def take_damages(self, damages):
         self.health[0] -= damages

@@ -30,6 +30,7 @@ class Game(tools.State):
         if self.game_started is False:
             self.start_game()
 
+    # GAME LOGIC
     def _in_level_coord(self, coord, span):
         """ Return the coordinates corrected so they don't exit the level limits """
         # Left and top limits
@@ -51,7 +52,7 @@ class Game(tools.State):
             while self.zombie_left[1] < self.level.zombie_number:
                 # TODO : Check for collision
                 spawn = choice(self.level.zombies_spawns)
-                rect = pg.Rect(spawn[0]+35, spawn[1]+35, 70, 70)
+                rect = pg.Rect(spawn[0]+35, spawn[1]+35, 140, 140)
                 if self.check_collision(rect, 'all') is False:
                     self.zombies.add(zombies.ZombieControl(spawn))
                     self.zombie_left[0] += 1
@@ -68,9 +69,10 @@ class Game(tools.State):
                         collision = True
                         break
             if 'zombies' not in ignore:
+                # TODO : Zombie always collide with himself ...
                 for zombie in self.zombies:
                     if chunk in zombie.current_chunks:
-                        if pg.sprite.collide_mask(zombie.projection, item):
+                        if pg.sprite.collide_mask(zombie.hitbox, item):
                             collision = True
                             break
         return collision
@@ -78,7 +80,12 @@ class Game(tools.State):
     def update(self):
         # Check for pause
         for u_player in tools.State.players:
-            if u_player.buttons['pause']:
+            if u_player.buttons['touchpad']:
+                self.next = 'gamemenu'
+                self.set_pause()
+                break
+            if u_player.buttons['options']:
+                self.next = 'pausemenu'
                 self.set_pause()
                 break
 
@@ -109,8 +116,14 @@ class Game(tools.State):
                 if on_screen and zombie.active is False:
                     zombie.activate()
                 if zombie.active:
-                    if zombie.target is None:
-                        zombie.seek_target()
+                    projection = pg.Vector2(zombie.projection_x.rect.centerx,
+                                            zombie.projection_y.rect.centery)
+                    projection = self._in_level_coord(projection, zombie.radius)
+                    if self.check_collision(zombie.projection_x, zombie.current_chunks, ignore=('zombies')):
+                        projection.x = zombie.projection_x.position.x
+                    if self.check_collision(zombie.projection_y, zombie.current_chunks, ignore=('zombies')):
+                        projection.y = zombie.projection_y.position.y
+                    zombie.set_position(projection)
 
         self.survivors.update()
         self.zombies.update()
@@ -132,7 +145,7 @@ class Game(tools.State):
                 rand = randrange(1,6)
                 b_start = start + (end-start) * (rand/10)
                 b_end = start + (end-start) * ((rand/10) + .05)
-                self.effect_list.append(['bullet', b_start, b_end])
+                self.effect_list.append(['bullet', 2, b_start, b_end])
 
     def _load_chunks(self):
         """ Recreate the chunk list from scratch """
@@ -180,12 +193,17 @@ class Game(tools.State):
             self._draw_debug(screen)
 
     def _draw_effects(self, screen):
+        new_list = []
         while len(self.effect_list) > 0:
             effect = self.effect_list.pop(0)
+            effect[1] -= 1
             if effect[0] == 'bullet':
-                pg.draw.line(screen, 'black', effect[1] + self._camera_offset(), effect[2] + self._camera_offset())
+                pg.draw.line(screen, 'black', effect[2] + self._camera_offset(), effect[3] + self._camera_offset())
             if effect[0] == 'round':
-                pg.draw.circle(screen, 'orange', effect[1] + self._camera_offset(), 5)
+                pg.draw.circle(screen, 'orange', effect[2] + self._camera_offset(), 5)
+            if effect[1] > 0:
+                new_list.append(effect)
+        self.effect_list = new_list.copy()
 
     def _draw_level(self, screen):
         for key in self.loaded_chunks:
@@ -204,8 +222,8 @@ class Game(tools.State):
             end = pg.Vector2(2000, survivor.weapon_offset[surv.weapon_img][1]).rotate(-surv.orientation) + surv.position
 
             n_start, n_end, _ = self._get_sightline(start, end)
-            pg.draw.line(screen, 'red', n_start + self._camera_offset(), n_end + self._camera_offset())
-            pg.draw.circle(screen, 'red', n_end + self._camera_offset(), 2)
+            #pg.draw.line(screen, 'red', n_start + self._camera_offset(), n_end + self._camera_offset())
+            #pg.draw.circle(screen, 'red', n_end + self._camera_offset(), 2)
 
             screen.blit(surv.image, position - pg.Vector2(70, 70))
 
@@ -246,6 +264,11 @@ class Game(tools.State):
     def _draw_zombies(self, screen):
         for zombie in self.zombies:
             position = pg.Vector2(zombie.position) + self._camera_offset()
+            # Health
+            h_current, h_max = zombie.health
+            pg.draw.rect(screen, 'black', (position[0] - 35, position[1] + 45, 70, 5))
+            pg.draw.rect(screen, 'red', (position[0] - 35, position[1] + 45, (h_current / h_max * 70), 5))
+
             pg.draw.circle(screen, (0, 0, 0, 128), position, zombie.radius)  # Shadow
             screen.blit(zombie.image, position - pg.Vector2(70, 70))
 
